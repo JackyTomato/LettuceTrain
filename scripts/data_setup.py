@@ -1,3 +1,13 @@
+"""
+Contains functionality for creating lettuce dataset as PyTorch Dataset
+and loading thre train & test datasets.
+
+TODO:
+    - Allow selection for classification, regression or segmentation datasets
+    - Tweak code to fit the dataset
+    - Test to see if it properly loads dataets
+"""
+# Import statements
 import os
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -6,9 +16,10 @@ from PIL import Image
 from sklearn.model_selection import train_test_split
 
 
+# Define Pytorch Dataset class for lettuce dataset
 class LettuceDataset(Dataset):
     def __init__(self, directory, is_train=True, transforms=None):
-        """Creates lettuce dataset as a PyTorch DataSet class object
+        """Creates lettuce dataset as a PyTorch Dataset class object
 
         Args:
             directory (str): Path to file containing image names and labels.
