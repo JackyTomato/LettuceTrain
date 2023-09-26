@@ -1,13 +1,20 @@
-import torch
-from torch.utils.data import DataLoader
-from torchvision import transforms
-
-from PIL import Image
 import os
+import torch
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
+from PIL import Image
+from sklearn.model_selection import train_test_split
 
 
-class LeafDataset(torch.utils.data.Dataset):
+class LettuceDataset(Dataset):
     def __init__(self, directory, is_train=True, transforms=None):
+        """Creates lettuce dataset as a PyTorch DataSet class object
+
+        Args:
+            directory (str): Path to file containing image names and labels.
+            is_train (bool, optional): _description_. Defaults to True.
+            transforms (transforms.Compose, optional): Composed torchvision transformations. Defaults to None.
+        """
         self.images = []
         self.labels = []
         self.transforms = transforms
@@ -32,18 +39,31 @@ class LeafDataset(torch.utils.data.Dataset):
             self.labels = y_test
 
     def __len__(self):
+        """Returns number of images in dataset
+
+        Returns:
+            int: Length of vector of images
+        """
         return len(self.images)
 
     def __getitem__(self, idx):
+        """Returns images and labels in dataset
+
+        Args:
+            idx (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         # Retrieve image and label
-        img = d2l.Image.open(self.images[idx])
+        img = Image.open(self.images[idx])
         labels = torch.tensor(int(self.labels[idx]), dtype=torch.float32)
 
         # Assertions to check that everything is correct
         assert isinstance(img, Image), "Image variable should be a PIL Image"
         assert isinstance(
             labels, torch.Tensor
-        ), "Labels varibable should be a torch tensor"
+        ), "Labels variable should be a torch tensor"
         assert (
             labels.dtype == torch.float32
         ), "Labels variable datatype should be float32"
@@ -56,16 +76,16 @@ class LeafDataset(torch.utils.data.Dataset):
 
 # Define data loaders for training and testing
 def load_train_data(augs, batch_size):
-    dataset = LeafDataset(root, is_train=True, transforms=augs)
-    dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size, shuffle=True, num_workers=2
+    train_dataset = LettuceDataset(root, is_train=True, transforms=augs)
+    train_dataloader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=2
     )
-    return dataloader
+    return train_dataloader
 
 
 def load_test_data(augs, batch_size):
-    dataset = LeafDataset(root, is_train=False, transforms=augs)
-    dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size, shuffle=False, num_workers=2
+    test_dataset = LettuceDataset(root, is_train=False, transforms=augs)
+    test_dataloader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False, num_workers=2
     )
-    return dataloader
+    return test_dataloader
