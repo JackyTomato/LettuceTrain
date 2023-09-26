@@ -18,11 +18,12 @@ from sklearn.model_selection import train_test_split
 
 # Define Pytorch Dataset class for lettuce dataset
 class LettuceDataset(Dataset):
-    def __init__(self, directory, is_train=True, transforms=None):
+    def __init__(self, directory, train_frac=0.75, is_train=True, transforms=None):
         """Creates lettuce dataset as a PyTorch Dataset class object
 
         Args:
             directory (str): Path to file containing image names and labels.
+            train_frac (float): Proportion of dataset to be training data.
             is_train (bool, optional): _description_. Defaults to True.
             transforms (transforms.Compose, optional): Composed torchvision transformations. Defaults to None.
         """
@@ -40,7 +41,7 @@ class LettuceDataset(Dataset):
                 self.labels.append(n_leafs)
 
         X_train, X_test, y_train, y_test = train_test_split(
-            self.images, self.labels, test_size=0.25, random_state=42
+            self.images, self.labels, train_size=train_frac, random_state=42
         )
         if is_train:
             self.images = X_train
