@@ -5,8 +5,7 @@ TODO:
     - Come up with what kinda backbones/models I want
     - Fill up model class, figure out how to adapt backbone
     - Allow selection for different backbones
-    - Allow selection for different model types
-    - Allow option to freeze backbone or not
+    - Allow selection for different subsequent layers (or make preset for each backbone)
 """
 # Import statements
 import torch
@@ -17,35 +16,57 @@ import torchvision
 
 # Define nn.Module class for model
 class TipburnClassifier(nn.Module):
-    def __init__(self, n_classes, bb_name=None, weights_bb=True, freeze_bb=True):
+    def __init__(
+        self, n_classes, bb_name=None, weights_bb="IMAGENET1K_V1", freeze_bb=True
+    ):
         """Creates tipburn classifier as PyTorch nn.Module class
 
         Creates a CNN with a backbone. Backbone can be pretrained and frozen.
+        Names of networks and weights should follow the torchvision API:
+            https://pytorch.org/vision/stable/models.html#listing-and-retrieving-available-models
         Only supports the following backbones:
+            resnet50, wide_resnet50_2
 
         Args:
             n_classes (int): Numbers of classes to predict.
-            bb_name (str, optional): _description_. Defaults to None.
-            weights_bb (bool, optional): _description_. Defaults to True.
-            freeze_bb (bool, optional): _description_. Defaults to True.
+            bb_name (str, optional): Name of backbone network. Defaults to None.
+            weights_bb (str, optional): Name of pretrained weights. Defaults to IMAGENET_1K_V1.
+            freeze_bb (bool, optional): If true, freezes weights in backbone. Defaults to True.
 
         Raises:
             Exception: _description_
         """
         super(TipburnClassifier, self).__init__()
-        # Backbone
+        self.n_classes = n_classes
+
+        # Set backbone
         if bb_name is not None:
-            backbone_call = f"torchvision.models.{bb_name}(weights={weights_bb})"
-            backbone = eval(backbone_call)
-            for param in backbone.parameters():
+            # Allows for different models and pretrained weights
+            backbone_call = f'torchvision.models.{bb_name}(weights="{weights_bb}")'
+            self.backbone = eval(backbone_call)
+
+            # Freeze weights in backbone
+            for param in self.backbone.parameters():
                 param.requires_grad = not freeze_bb
-            # TODO: adjust final layers of backbone to suit model, prolly only support few models
         else:
             raise Exception("No argument for bb_name, a backbone is mandatory")
 
-        # Layer 1
+        # For ResNets
+        if bb_name in ["resnet50", "wide_resnet50_2"]:
+            # Remember number of output features of backbone
+            out_features_bb = list(self.backbone.children())[-1].in_features
 
-        # Classifier
+            # Remove final layer of backbone
+            self.backbone = nn.Sequential(*list(self.backbone.children())[:-1])
+
+            # Classifier with output features of backbone as input
+            self.classifier = nn.Sequential(
+                nn.Flatten(), nn.Linear(out_features_bb, self.n_classes)
+            )
+        else:
+            raise Exception("Selected backbone model is unsupported")
 
     def forward(self, x):
-        return
+        features = self.backbone(x)
+        pred_logits = self.classifier(features)
+        return pred_logits
