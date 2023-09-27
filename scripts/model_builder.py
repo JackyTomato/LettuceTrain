@@ -60,6 +60,7 @@ class TipburnClassifier(nn.Module):
             self.backbone = nn.Sequential(*list(self.backbone.children())[:-1])
 
             # Classifier with output features of backbone as input
+            # TODO: make more sophisticated -> dropout, batch normalization?
             self.classifier = nn.Sequential(
                 nn.Flatten(), nn.Linear(out_features_bb, self.n_classes)
             )
