@@ -25,12 +25,13 @@ class TipburnClassifier(nn.Module):
 
         # Backbone
         if bb_name is not None:
-            backbone_call = f'torchvision.models.{bb_name}(pretrained={pretrained_bb})'
+            backbone_call = f"torchvision.models.{bb_name}(pretrained={pretrained_bb})"
             backbone = eval(backbone_call)
             for param in backbone.parameters():
                 param.requires_grad = not freeze_bb
+            # TODO: adjust final layers of backbone to suit model, prolly only support few models
         else:
-
+            raise Exception("No argument for bb_name, a backbone is required")
 
         # Layer 1
 
