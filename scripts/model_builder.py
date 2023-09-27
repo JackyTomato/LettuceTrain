@@ -17,16 +17,20 @@ import torchvision
 
 # Define nn.Module class for model
 class TipburnClassifier(nn.Module):
-    def __init__(self, n_classes, pretrained_bb=True, freeze_bb=True):
+    def __init__(self, n_classes, bb_name=None, pretrained_bb=True, freeze_bb=True):
         super(TipburnClassifier, self).__init__()
 
         # We add the background class
         self.n_classes = n_classes + 1
 
         # Backbone
-        backbone = torchvision.models.(pretrained=pretrained_bb)
-        for param in backbone.parameters():
-            param.requires_grad = not freeze_bb
+        if bb_name is not None:
+            backbone_call = f'torchvision.models.{bb_name}(pretrained={pretrained_bb})'
+            backbone = eval(backbone_call)
+            for param in backbone.parameters():
+                param.requires_grad = not freeze_bb
+        else:
+
 
         # Layer 1
 
