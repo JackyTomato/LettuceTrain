@@ -14,6 +14,10 @@ from torch import nn
 from torchinfo import summary
 import torchvision
 
+a = 3
+b = 4
+a + b
+
 
 # Define nn.Module class for model
 class TipburnClassifier(nn.Module):
