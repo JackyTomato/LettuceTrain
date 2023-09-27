@@ -3,7 +3,6 @@ Contains functionality for building models as nn.Module class.
 
 TODO:
     - Come up with what kinda backbones/models I want
-    - Fill up model class, figure out how to adapt backbone
     - Allow selection for different backbones
     - Allow selection for different subsequent layers (or make preset for each backbone)
 """
