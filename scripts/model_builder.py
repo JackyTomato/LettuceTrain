@@ -8,7 +8,7 @@ TODO:
 """
 # Import statements
 import torch
-from torch import nn
+import torch.nn as nn
 from torchinfo import summary
 import torchvision
 
