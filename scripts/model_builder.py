@@ -18,7 +18,7 @@ class TipburnClassifier(nn.Module):
     def __init__(
         self, n_classes, bb_name=None, weights_bb="IMAGENET1K_V1", freeze_bb=True
     ):
-        """Creates tipburn classifier as PyTorch nn.Module class
+        """Creates tipburn classifier as PyTorch nn.Module class.
 
         Creates a CNN with a backbone. Backbone can be pretrained and frozen.
         Names of networks and weights should follow the torchvision API:
