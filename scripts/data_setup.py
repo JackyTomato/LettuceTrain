@@ -1,5 +1,5 @@
 """
-Contains functionality for creating lettuce dataset as PyTorch Dataset
+Creating lettuce dataset as PyTorch Dataset
 and loading thre train & test datasets.
 
 TODO:
