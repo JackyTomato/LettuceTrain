@@ -1,5 +1,5 @@
 """
-Building models as nn.Module class.
+Functionality for building models as nn.Module class.
 
 TODO:
     - Come up with what kinda backbones/models I want
