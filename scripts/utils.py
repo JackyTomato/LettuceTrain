@@ -45,7 +45,7 @@ def load_checkpoint(checkpoint, model):
         model (nn.Module): PyTorch model on which the state will be applied.
     """
     print(f"[INFO] Opening model state: {checkpoint}")
-    model.load_state_dict(checkpoint["state_dict"])
+    model.load_state_dict(torch.load(checkpoint)["state_dict"])
 
 
 # Performance metrics
