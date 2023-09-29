@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 """
 Functionality for creating lettuce dataset as PyTorch Dataset
 and loading thre train & test datasets.
