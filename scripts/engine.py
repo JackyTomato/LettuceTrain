@@ -27,19 +27,19 @@ def train_step(model, dataloader, loss_fn, performance_fn, optimizer, scaler, de
     AMP is performed using torch.cuda.amp.autocast() and a scaler.
 
     Args:
-      model (nn.Module): A PyTorch model to be trained.
-      dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be trained on.
-      loss_fn (nn.Module): A PyTorch loss function to minimize.
-      performance_fn (function): A function that calculates a performance metric, e.g. class accuracy in utils.
-      optimizer (torch.optim.Optimizer): A PyTorch optimizer to help minimize the loss function.
-      scaler (torch.cuda.amp.GradScaler): A PyTorch gradient scaler to help minimize gradient underflow.
-      device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
+        model (nn.Module): A PyTorch model to be trained.
+        dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be trained on.
+        loss_fn (nn.Module): A PyTorch loss function to minimize.
+        performance_fn (function): A function that calculates a performance metric, e.g. class accuracy in utils.
+        optimizer (torch.optim.Optimizer): A PyTorch optimizer to help minimize the loss function.
+        scaler (torch.cuda.amp.GradScaler): A PyTorch gradient scaler to help minimize gradient underflow.
+        device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
 
     Returns:
-      A tuple of training loss and training performance metrics.
-      In the form (train_loss, train_performance). For example:
+        A tuple of training loss and training performance metrics.
+        In the form (train_loss, train_performance). For example:
 
-      (0.1112, 0.8743)
+        (0.1112, 0.8743)
     """
     # Put model in train mode
     model.train()
@@ -90,17 +90,17 @@ def test_step(model, dataloader, loss_fn, performance_fn, device):
     for the logits must be used.
 
     Args:
-      model (nn.Module): A PyTorch model to be tested.
-      dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be tested on.
-      loss_fn (nn.Module): A PyTorch loss function to calculate loss on the test data.
-      performance_fn (function): A function that calculates a performance metric, e.g. class accuracy in utils.
-      device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
+        model (nn.Module): A PyTorch model to be tested.
+        dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be tested on.
+        loss_fn (nn.Module): A PyTorch loss function to calculate loss on the test data.
+        performance_fn (function): A function that calculates a performance metric, e.g. class accuracy in utils.
+        device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
 
     Returns:
-      A tuple of testing loss and testing performance metrics.
-      In the form (test_loss, test_accuracy). For example:
+        A tuple of testing loss and testing performance metrics.
+        In the form (test_loss, test_accuracy). For example:
 
-      (0.0223, 0.8985)
+        (0.0223, 0.8985)
     """
     # Put model in eval mode
     model.eval()
@@ -151,28 +151,28 @@ def train(
     Calculates, prints and stores evaluation metrics throughout.
 
     Args:
-      model (nn.Module): A PyTorch model to be trained and tested.
-      train_dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be trained on.
-      test_dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be tested on.
-      optimizer (torch.optim.Optimizer): A PyTorch optimizer to help minimize the loss function.
-      scaler (torch.cuda.amp.GradScaler): A PyTorch gradient scaler to help minimize gradient underflow.
-      loss_fn (nn.Module): A PyTorch loss function to calculate loss on both datasets.
-      epochs (int): An integer indicating how many epochs to train for.
-      device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
+        model (nn.Module): A PyTorch model to be trained and tested.
+        train_dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be trained on.
+        test_dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be tested on.
+        optimizer (torch.optim.Optimizer): A PyTorch optimizer to help minimize the loss function.
+        scaler (torch.cuda.amp.GradScaler): A PyTorch gradient scaler to help minimize gradient underflow.
+        loss_fn (nn.Module): A PyTorch loss function to calculate loss on both datasets.
+        epochs (int): An integer indicating how many epochs to train for.
+        device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
 
     Returns:
-      A dictionary of training and testing loss as well as training and
-      testing performance metrics. Each metric has a value in a list for
-      each epoch.
-      In the form: {train_loss: [...],
-                    train_perform: [...],
-                    test_loss: [...],
-                    test_perform: [...]}
-      For example if training for epochs=2:
-                   {train_loss: [2.0616, 1.0537],
-                    train_perform: [0.3945, 0.3945],
-                    test_loss: [1.2641, 1.5706],
-                    test_perform: [0.3400, 0.2973]}
+        A dictionary of training and testing loss as well as training and
+        testing performance metrics. Each metric has a value in a list for
+        each epoch.
+        In the form: {train_loss: [...],
+                        train_perform: [...],
+                        test_loss: [...],
+                        test_perform: [...]}
+        For example if training for epochs=2:
+                    {train_loss: [2.0616, 1.0537],
+                        train_perform: [0.3945, 0.3945],
+                        test_loss: [1.2641, 1.5706],
+                        test_perform: [0.3400, 0.2973]}
     """
     # Create empty results dictionary
     results = {
