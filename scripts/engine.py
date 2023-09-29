@@ -2,7 +2,7 @@
 Functionality for training and testing
 
 TODO:
-    - Implement checkpointing
+    - Implement checkpointing in loop
     - Maybe add training plot
 """
 
