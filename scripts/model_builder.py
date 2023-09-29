@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """
 Functionality for building models as nn.Module class.
 

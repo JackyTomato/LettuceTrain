@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """
 Functionality for training and testing
 
