@@ -35,6 +35,7 @@ def save_checkpoint(state, target_dir, model_name):
     # Save the model state_dict()
     print(f"[INFO] Saving model states to: {model_save_path}")
     torch.save(obj=state, f=model_save_path)
+    print(f"[INFO] Saving model to {model_save_path} was succesful!")
 
 
 def load_checkpoint(checkpoint, model):
@@ -46,6 +47,7 @@ def load_checkpoint(checkpoint, model):
     """
     print(f"[INFO] Opening model state: {checkpoint}")
     model.load_state_dict(torch.load(checkpoint)["state_dict"])
+    print(f"[INFO] Loading model state {checkpoint} was succesful!")
 
 
 # Performance metrics
