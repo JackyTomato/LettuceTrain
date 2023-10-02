@@ -8,6 +8,7 @@ import statements to your /scripts/ file path.
 
 TODO:
     - Add config.json functionality by parsing (separate script? make sure obj types correct)
+    - Think about how to allow customizability transforms
     - Make torchvision summary extract input size from data
     - Also save loss and performance during training & testing
     - Also save model summary
