@@ -139,6 +139,7 @@ def train(
     optimizer,
     scaler,
     loss_fn,
+    performance_fn,
     epochs,
     device,
 ):
@@ -157,6 +158,7 @@ def train(
         optimizer (torch.optim.Optimizer): A PyTorch optimizer to help minimize the loss function.
         scaler (torch.cuda.amp.GradScaler): A PyTorch gradient scaler to help minimize gradient underflow.
         loss_fn (nn.Module): A PyTorch loss function to calculate loss on both datasets.
+        performance_fn (function): A function that calculates a performance metric, e.g. class accuracy in utils.
         epochs (int): An integer indicating how many epochs to train for.
         device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
 
@@ -188,6 +190,7 @@ def train(
             model=model,
             dataloader=train_dataloader,
             loss_fn=loss_fn,
+            performance_fn=performance_fn,
             optimizer=optimizer,
             scaler=scaler,
             device=device,
@@ -196,6 +199,7 @@ def train(
             model=model,
             dataloader=test_dataloader,
             loss_fn=loss_fn,
+            performance_fn=performance_fn,
             device=device,
         )
 
