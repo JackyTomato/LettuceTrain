@@ -4,6 +4,7 @@ Functionality for training and testing
 TODO:
     - Implement checkpointing in loop
     - Maybe add training plot
+    - Move train function to graveyard
 """
 
 # Import statements
