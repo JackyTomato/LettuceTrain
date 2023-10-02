@@ -7,7 +7,8 @@ from a different workin directory, adjust the variable 'new_cwd' in
 import statements to your /scripts/ file path.
 
 TODO:
-    - Add config.json functionality by parsing (separate script? make sure obj types correct)
+    - Add config.json functionality by parsing (separate script? make sure obj types are correct)
+    - Think about how to allow customizability transforms
     - Make torchvision summary extract input size from data
     - Also save loss and performance during training & testing
     - Also save model summary
