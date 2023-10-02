@@ -16,7 +16,7 @@ import torchvision
 # Define nn.Module class for model
 class TipburnClassifier(nn.Module):
     def __init__(
-        self, n_classes, bb_name=None, weights_bb="IMAGENET1K_V1", freeze_bb=True
+        self, n_classes, bb_name=None, bb_weights="IMAGENET1K_V1", bb_freeze=True
     ):
         """Creates tipburn classifier as PyTorch nn.Module class.
 
@@ -29,8 +29,8 @@ class TipburnClassifier(nn.Module):
         Args:
             n_classes (int): Numbers of classes to predict.
             bb_name (str, optional): Name of backbone network. Defaults to None.
-            weights_bb (str, optional): Name of pretrained weights. Defaults to IMAGENET_1K_V1.
-            freeze_bb (bool, optional): If true, freezes weights in backbone. Defaults to True.
+            bb_weights (str, optional): Name of pretrained weights. Defaults to IMAGENET_1K_V1.
+            bb_freeze (bool, optional): If true, freezes weights in backbone. Defaults to True.
 
         Raises:
             Exception: _description_
@@ -41,12 +41,12 @@ class TipburnClassifier(nn.Module):
         # Set backbone
         if bb_name is not None:
             # Allows for different models and pretrained weights
-            backbone_call = f'torchvision.models.{bb_name}(weights="{weights_bb}")'
+            backbone_call = f'torchvision.models.{bb_name}(weights="{bb_weights}")'
             self.backbone = eval(backbone_call)
 
             # Freeze weights in backbone
             for param in self.backbone.parameters():
-                param.requires_grad = not freeze_bb
+                param.requires_grad = not bb_freeze
         else:
             raise Exception("No argument for bb_name, a backbone is mandatory")
 
@@ -70,3 +70,12 @@ class TipburnClassifier(nn.Module):
         features = self.backbone(x)
         pred_logits = self.classifier(features)
         return pred_logits
+
+
+model = TipburnClassifier(2, "wide_resnet50_2")
+summary(
+    model,
+    (1, 3, 512, 512),
+    col_names=["kernel_size", "input_size", "output_size", "num_params"],
+)
+str(model)

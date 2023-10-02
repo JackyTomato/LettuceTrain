@@ -9,7 +9,6 @@ TODO:
 # Import statements
 import torch
 import torch.nn as nn
-from tqdm import tqdm
 
 
 # Define train step function per epoch

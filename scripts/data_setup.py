@@ -5,6 +5,7 @@ and loading thre train & test datasets.
 TODO:
     - Allow selection for classification, regression or segmentation datasets
     - Tweak code to fit the dataset
+    - Merge loaders
     - Test to see if it properly loads dataets
 """
 # Import statements
@@ -18,7 +19,9 @@ from sklearn.model_selection import train_test_split
 
 # Define Pytorch Dataset class for lettuce dataset
 class LettuceDataset(Dataset):
-    def __init__(self, directory, train_frac=0.75, is_train=True, transforms=None):
+    def __init__(
+        self, directory, train_frac=0.75, is_train=True, transforms=None, seed=42
+    ):
         """Creates lettuce dataset as a PyTorch Dataset class object
 
         Args:
@@ -41,7 +44,7 @@ class LettuceDataset(Dataset):
                 self.labels.append(n_leafs)
 
         X_train, X_test, y_train, y_test = train_test_split(
-            self.images, self.labels, train_size=train_frac, random_state=42
+            self.images, self.labels, train_size=train_frac, random_state=seed
         )
         if is_train:
             self.images = X_train

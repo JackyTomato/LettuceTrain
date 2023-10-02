@@ -1,10 +1,15 @@
 """
 Contains various utility functions such as checkpointing and performance metrics.
+
+TODO:
+    - Test save results, save summary and save config
 """
 # Import functions
 import torch
 import torch.nn as nn
+from torchinfo import summary
 from pathlib import Path
+from shutil import copyfile
 
 
 # Checkpointing
@@ -76,3 +81,93 @@ def class_accuracy(pred_logits, labels):
     # Calculate and return accuracy
     pred_acc = (pred_labels == labels).sum().item() / len(pred_labels)
     return pred_acc
+
+
+# Save training results
+def save_train_results(dict_results, target_dir, filename):
+    """Writes training loop results to a tab-delimited text file.
+
+    Input dictionary of results should be in format as constructed in train.py.
+    Thus, with "epoch", "train_loss", "train_perform", "test_loss" and "test_perform"
+    as keys.
+
+    Args:
+        dict_results (dict): Dictionary of training loop results.
+        target_dir (string): Target directory in which to write the file.
+        filename (string): File name of the text file to be written.
+    """
+    filepath = target_dir + "/" + filename
+
+    # Sort keys to get sorted columns
+    sorted_keys = [
+        "epoch",
+        "train_loss",
+        "train_perform",
+        "test_loss",
+        "test_perform",
+    ]
+
+    # Get number of items to write rows
+    num_items = len(dict_results["epoch"])
+
+    # Write dictonary to file
+    with open(filepath, "w") as f:
+        # Write header
+        header = "\t".join(sorted_keys)
+        f.write(header)
+        f.write("\n")
+
+        # Write rows
+        for row in range(num_items):
+            line_values = []
+            for key in sorted_keys:
+                target_column = dict_results[key]
+                line_values.append(str(target_column[row]))
+            line = "\t".join(line_values)
+            f.write(line)
+            f.write("\n")
+    print(f"[INFO] Saved training results to {filepath}")
+
+
+def save_network_summary(model, target_dir, filename):
+    """Writes a torchinfo summary and raw print summary of a model to a text file
+
+    Args:
+        model (nn.Module): PyTorch model to be summarized.
+        target_dir (string): Target directory in which to write the file.
+        filename (string): File name of the text file to be written.
+    """
+    filepath = target_dir + "/" + filename
+
+    # Get torchinfo summary of model
+    model_stats = summary(
+        model=model,
+        input_size=(1, 3, 512, 512),
+        col_names=["kernel_size", "input_size", "output_size", "num_params"],
+    )
+    str_model_stats = str(model_stats)
+
+    # Get raw model as string (show all layers and parameters)
+    str_raw_model = str(model)
+
+    # Write model summaries to file
+    with open(filepath, "w") as f:
+        f.write("TORCHINFO SUMMARY")
+        f.write("\n")
+        f.write(str_model_stats)
+        f.write("\n")
+        f.write("RAW SUMMARY")
+    print(f"[INFO] Saved network summaries to {filepath}")
+
+
+def save_config(target_dir, filename):
+    """Saves config.json used for the model to a new text file.
+
+    Args:
+        target_dir (string): Target directory in which to write the file.
+        filename (string): File name of the text file to be written.
+    """
+    source = "config.json"
+    filepath = target_dir + "/" + filename
+    copyfile(source, filepath)
+    print(f"[INFO] Saved config.json to {filepath}")
