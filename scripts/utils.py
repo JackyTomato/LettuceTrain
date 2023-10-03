@@ -152,11 +152,11 @@ def save_network_summary(model, target_dir, filename):
 
     # Write model summaries to file
     with open(filepath, "w") as f:
-        f.write("TORCHINFO SUMMARY")
+        f.write("[TORCHINFO SUMMARY]")
         f.write("\n")
         f.write(str_model_stats)
         f.write("\n\n")
-        f.write("RAW SUMMARY")
+        f.write("[RAW SUMMARY]")
         f.write("\n")
         f.write(str_raw_model)
     print(f"[INFO] Saved network summaries to {filepath}")
