@@ -81,6 +81,9 @@ SAVE_MODEL_DIR = config["SAVE_MODEL_DIR"]
 SAVE_MODEL_NAME = config["SAVE_MODEL_NAME"]
 LOAD_MODEL_PATH = config["LOAD_MODEL_PATH"]
 
+# Print succesful config load
+print("[INFO] Loading config.json was succesful!")
+
 
 def main():
     # Set seeds for reproducibility
