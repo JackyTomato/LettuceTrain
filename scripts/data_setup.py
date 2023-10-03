@@ -5,7 +5,7 @@ and loading thre train & test datasets.
 TODO:
     - Allow selection for classification, regression or segmentation datasets
     - Tweak code to fit the dataset
-    - Merge loaders
+    - Merge loaders to get_loaders
     - Test to see if it properly loads dataets
 """
 # Import statements
