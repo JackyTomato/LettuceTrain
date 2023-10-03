@@ -1,13 +1,21 @@
 """
-Trains a PyTorch image classification model using device-agnostic code.
+Trains a PyTorch model according to the user's configuration in "config.json".
 
 [WARNING!] The script should be ran from the /scripts/ directory
 to make sure all file paths are correct. If you would still like to run
 from a different workin directory, adjust the variable 'new_cwd' in
 import statements to your /scripts/ file path.
 
+The script uses a config.json file in the /scripts/ directory to obtain
+all the necessary information. The config includes seed, hyperparameters,
+device, data loading, model and save settings.
+
+Explanation of settings in config.json:
+
+
 TODO:
     - Add config.json functionality by parsing (separate script? make sure obj types correct)
+    - Think about what config.json settings to have for data class & loaders
     - Think about how to allow customizability transforms
     - Make torchvision summary extract input size from data
     - Also save loss and performance during training & testing
@@ -22,6 +30,7 @@ import torch
 import numpy as np
 import random
 from tqdm import tqdm
+
 try:
     import data_setup, engine, model_builder, utils
 except:
@@ -31,44 +40,47 @@ except:
     import data_setup, engine, model_builder, utils
 
 
+# Parse config.json to obtain all globals
+config = utils.parse_config("config.json")
+
 # Seed
-SEED = 
+SEED = config["SEED"]
 
 # Setup hyperparameters and other training specifics
-LEARNING_RATE = 
-NUM_EPOCHS = 
-MODEL_TYPE = 
-DATA_CLASS = 
-DATALOADER_TRAIN = 
-DATALOADER_TEST = 
-OPTIMIZER = 
-SCALER = 
-LOSS_FN = 
-PERFORMANCE_FN = 
+LEARNING_RATE = config["LEARNING_RATE"]
+NUM_EPOCHS = config["NUM_EPOCHS"]
+DATA_CLASS = config["DATA_CLASS"]
+DATALOADER_TRAIN = config["DATALOADER_TRAIN"]
+DATALOADER_TEST = config["DATALOADER_TEST"]
+OPTIMIZER = config["OPTIMIZER"]
+SCALER = config["SCALER"]
+LOSS_FN = config["LOSS_FN"]
+PERFORMANCE_FN = config["PERFORMANCE_FN"]
 
 # Setup device settings
-DEVICE = 
-NUM_WORKERS = 
-PIN_MEMORY = 
+DEVICE = config["DEVICE"]
+NUM_WORKERS = config["NUM_WORKERS"]
+PIN_MEMORY = config["PIN_MEMORY"]
 
 # Setup data loading settings
-IMG_DIR = 
-LABEL_DIR = 
-TRAIN_FRAC = 
-TRANSFORMS = 
-BATCH_SIZE = 
+IMG_DIR = config["IMG_DIR"]
+LABEL_DIR = config["LABEL_DIR"]
+TRAIN_FRAC = config["TRAIN_FRAC"]
+TRANSFORMS = config["TRANSFORMS"]
+BATCH_SIZE = config["BATCH_SIZE"]
 
 # Setup model settings
-MODEL_TYPE = 
-BB_NAME = 
-BB_WEIGHTS = 
-BB_FREEZE = 
+MODEL_TYPE = config["MODEL_TYPE"]
+BB_NAME = config["BB_NAME"]
+BB_WEIGHTS = config["BB_WEIGHTS"]
+BB_FREEZE = config["BB_FREEZE"]
 
 # Setup checkpointing, save and load
-CHECKPOINT_FREQ = 
-SAVE_MODEL_DIR = 
-SAVE_MODEL_NAME = 
-LOAD_MODEL_PATH = 
+CHECKPOINT_FREQ = config["CHECKPOINT_FREQ"]
+SAVE_MODEL_DIR = config["SAVE_MODEL_DIR"]
+SAVE_MODEL_NAME = config["SAVE_MODEL_NAME"]
+LOAD_MODEL_PATH = config["LOAD_MODEL_PATH"]
+
 
 def main():
     # Set seeds for reproducibility
@@ -131,10 +143,10 @@ def main():
 
         # Checkpoint model at a given frequency if requested
         if CHECKPOINT_FREQ:
-            if (epoch+1) % CHECKPOINT_FREQ == 0: # Current epoch is epoch+1
+            if (epoch + 1) % CHECKPOINT_FREQ == 0:  # Current epoch is epoch+1
                 checkpoint = {
-                    "state_dict": model.state_dict(), 
-                    "optimizer":OPTIMIZER.state_dict(),
+                    "state_dict": model.state_dict(),
+                    "optimizer": OPTIMIZER.state_dict(),
                 }
                 utils.save_checkpoint(
                     state=checkpoint,
@@ -152,17 +164,17 @@ def main():
         )
 
         # Update results dictionary
-        results["epoch"].append(epoch+1)
+        results["epoch"].append(epoch + 1)
         results["train_loss"].append(train_loss)
         results["train_perform"].append(train_perform)
         results["test_loss"].append(test_loss)
         results["test_perform"].append(test_perform)
 
     # Save the model with help from utils.py
-    if NUM_EPOCHS % CHECKPOINT_FREQ != 0: # Don't save when final epoch was checkpoint
+    if NUM_EPOCHS % CHECKPOINT_FREQ != 0:  # Don't save when final epoch was checkpoint
         final_state = {
-            "state_dict": model.state_dict(), 
-            "optimizer":OPTIMIZER.state_dict(),
+            "state_dict": model.state_dict(),
+            "optimizer": OPTIMIZER.state_dict(),
         }
         utils.save_checkpoint(
             state=final_state,
@@ -174,20 +186,20 @@ def main():
     utils.save_train_results(
         dict_results=results,
         target_dir=SAVE_MODEL_DIR,
-        filename="results_"+SAVE_MODEL_NAME+".tsv",
+        filename="results_" + SAVE_MODEL_NAME + ".tsv",
     )
 
     # Save a torchinfo summary of the network
     utils.save_network_summary(
         model=model,
         target_dir=SAVE_MODEL_DIR,
-        filename="summary_"+SAVE_MODEL_NAME+".txt",
+        filename="summary_" + SAVE_MODEL_NAME + ".txt",
     )
 
     # Save the config
     utils.save_config(
-        target_dir=SAVE_MODEL_DIR,
-        filename="config_"+SAVE_MODEL_NAME+".json")
+        target_dir=SAVE_MODEL_DIR, filename="config_" + SAVE_MODEL_NAME + ".json"
+    )
 
 
 if __name__ == "__main__":
