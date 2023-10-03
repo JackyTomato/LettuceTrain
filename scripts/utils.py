@@ -6,7 +6,8 @@ TODO:
 """
 # Import functions
 import torch
-import torch.nn as nn
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 from torchinfo import summary
 from pathlib import Path
 from shutil import copyfile
@@ -83,7 +84,7 @@ def class_accuracy(pred_logits, labels):
     return pred_acc
 
 
-# Save training results
+# Save training results, network summaries and config
 def save_train_results(dict_results, target_dir, filename):
     """Writes training loop results to a tab-delimited text file.
 
@@ -93,10 +94,12 @@ def save_train_results(dict_results, target_dir, filename):
 
     Args:
         dict_results (dict): Dictionary of training loop results.
-        target_dir (string): Target directory in which to write the file.
-        filename (string): File name of the text file to be written.
+        target_dir (str): Target directory in which to write the file.
+        filename (str): File name of the text file to be written.
     """
-    filepath = target_dir + "/" + filename
+    # Create target directory
+    target_dir_path = Path(target_dir)
+    target_dir_path.mkdir(parents=True, exist_ok=True)
 
     # Sort keys to get sorted columns
     sorted_keys = [
@@ -111,6 +114,7 @@ def save_train_results(dict_results, target_dir, filename):
     num_items = len(dict_results["epoch"])
 
     # Write dictonary to file
+    filepath = target_dir + "/" + filename
     with open(filepath, "w") as f:
         # Write header
         header = "\t".join(sorted_keys)
@@ -134,10 +138,12 @@ def save_network_summary(model, target_dir, filename):
 
     Args:
         model (nn.Module): PyTorch model to be summarized.
-        target_dir (string): Target directory in which to write the file.
-        filename (string): File name of the text file to be written.
+        target_dir (str): Target directory in which to write the file.
+        filename (str): File name of the text file to be written.
     """
-    filepath = target_dir + "/" + filename
+    # Create target directory
+    target_dir_path = Path(target_dir)
+    target_dir_path.mkdir(parents=True, exist_ok=True)
 
     # Get torchinfo summary of model
     model_stats = summary(
@@ -147,10 +153,11 @@ def save_network_summary(model, target_dir, filename):
     )
     str_model_stats = str(model_stats)
 
-    # Get raw model as string (show all layers and parameters)
+    # Get raw model as str (show all layers and parameters)
     str_raw_model = str(model)
 
     # Write model summaries to file
+    filepath = target_dir + "/" + filename
     with open(filepath, "w") as f:
         f.write("[TORCHINFO SUMMARY]")
         f.write("\n")
@@ -162,14 +169,28 @@ def save_network_summary(model, target_dir, filename):
     print(f"[INFO] Saved network summaries to {filepath}")
 
 
-def save_config(target_dir, filename):
+def save_config(target_dir, filename, config_name="config.json"):
     """Saves config.json used for the model to a new text file.
 
     Args:
-        target_dir (string): Target directory in which to write the file.
-        filename (string): File name of the text file to be written.
+        target_dir (str): Target directory in which to write the file.
+        filename (str): File name of the text file to be written.
+        config_name (str): Name of config file to save. Defaults to "config.json".
     """
-    source = "config.json"
+    # Create target directory
+    target_dir_path = Path(target_dir)
+    target_dir_path.mkdir(parents=True, exist_ok=True)
+
+    # Copy config to new file
     filepath = target_dir + "/" + filename
-    copyfile(source, filepath)
+    copyfile(config_name, filepath)
     print(f"[INFO] Saved config.json to {filepath}")
+
+
+# Config parser
+def parse_config(config_path):
+    """Parses a config.json file as a dictionary containing all the values.
+
+    Args:
+        config_path (str): _description_
+    """
