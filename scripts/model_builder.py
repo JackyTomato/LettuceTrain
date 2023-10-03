@@ -70,12 +70,3 @@ class TipburnClassifier(nn.Module):
         features = self.backbone(x)
         pred_logits = self.classifier(features)
         return pred_logits
-
-
-model = TipburnClassifier(2, "wide_resnet50_2")
-summary(
-    model,
-    (1, 3, 512, 512),
-    col_names=["kernel_size", "input_size", "output_size", "num_params"],
-)
-str(model)
