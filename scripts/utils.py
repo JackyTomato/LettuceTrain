@@ -2,7 +2,7 @@
 Contains various utility functions such as checkpointing and performance metrics.
 
 TODO:
-    - Test save results, save summary and save config
+    - Config parser, use albumentations for transforms
 """
 # Import functions
 import torch
@@ -11,6 +11,7 @@ from albumentations.pytorch import ToTensorV2
 from torchinfo import summary
 from pathlib import Path
 from shutil import copyfile
+from json import load as json_load
 
 
 # Checkpointing
@@ -189,8 +190,16 @@ def save_config(target_dir, filename, config_name="config.json"):
 
 # Config parser
 def parse_config(config_path):
-    """Parses a config.json file as a dictionary containing all the values.
+    """Parses the "config.json" file as a dictionary containing all the values.
+
+    The "config.json" file contains all of the settings needed for training a model.
+    These settings include seed, hyperparameters, device, data loading, model
+    and save settings.
 
     Args:
-        config_path (str): _description_
+        config_path (str): File path to "config.json"
     """
+    # Parse config.json as dict with json's load function
+    with open(config_path, "r") as config_json:
+        config_dict = json_load(config_json)
+    return config_dict
