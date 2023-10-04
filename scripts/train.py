@@ -39,16 +39,16 @@ os.chdir(new_cwd)
 import data_setup, engine, model_builder, utils
 
 # Import config setting variables from config_parser
-from config_parser import *
+import config_parser as cp
 
 print("[INFO] Loading config.json was succesful!")
 
 
 def main():
     # Set seeds for reproducibility
-    torch.manual_seed(SEED)
-    random.seed(SEED)
-    np.random.seed(SEED)
+    torch.manual_seed(cp.SEED)
+    random.seed(cp.SEED)
+    np.random.seed(cp.SEED)
 
     # Create DataLoaders with help from data_setup.py
     # train_loader, test_loader = data_setup.get_loaders(
@@ -62,24 +62,24 @@ def main():
     #     pin_memory=PIN_MEMORY,
     # )
     train_loader, test_loader = data_setup.MNIST_digit_loaders(
-        BATCH_SIZE, NUM_WORKERS, PIN_MEMORY
+        cp.BATCH_SIZE, cp.NUM_WORKERS, cp.PIN_MEMORY
     )
 
     # Create model with help from model_builder.py
-    model = MODEL_TYPE(
-        n_classes=N_CLASSES,
-        bb_name=BB_NAME,
-        bb_weights=BB_WEIGHTS,
-        bb_freeze=BB_FREEZE,
+    model = cp.MODEL_TYPE(
+        n_classes=cp.N_CLASSES,
+        bb_name=cp.BB_NAME,
+        bb_weights=cp.BB_WEIGHTS,
+        bb_freeze=cp.BB_FREEZE,
     )
 
     # Start training with help from engine.py
     # Load model if requested
-    if LOAD_MODEL == True:
-        utils.load_checkpoint(checkpoint=LOAD_MODEL_PATH, model=model)
+    if cp.LOAD_MODEL == True:
+        utils.load_checkpoint(checkpoint=cp.LOAD_MODEL_PATH, model=model)
 
     # Prepare optimizer
-    OPTIMIZER = OPTIMIZER(params=model.parameters(), lr=LEARNING_RATE)
+    cp.OPTIMIZER = cp.OPTIMIZER(params=model.parameters(), lr=cp.LEARNING_RATE)
 
     # Create empty results dictionary for loss and performance during training loop
     results = {
@@ -91,38 +91,38 @@ def main():
     }
 
     # Setup tqdm loop for progress bar over epochs
-    epoch_loop = tqdm(range(NUM_EPOCHS))
+    epoch_loop = tqdm(range(cp.NUM_EPOCHS))
 
     # Training loop for a number of epochs
     for epoch in epoch_loop:
         train_loss, train_perform = engine.train_step(
             model=model,
             dataloader=train_loader,
-            loss_fn=LOSS_FN,
-            performance_fn=PERFORMANCE_FN,
-            optimizer=OPTIMIZER,
-            scaler=SCALER,
-            device=DEVICE,
+            loss_fn=cp.LOSS_FN,
+            performance_fn=cp.PERFORMANCE_FN,
+            optimizer=cp.OPTIMIZER,
+            scaler=cp.SCALER,
+            device=cp.DEVICE,
         )
         test_loss, test_perform = engine.test_step(
             model=model,
             dataloader=test_loader,
-            loss_fn=LOSS_FN,
-            performance_fn=PERFORMANCE_FN,
-            device=DEVICE,
+            loss_fn=cp.LOSS_FN,
+            performance_fn=cp.PERFORMANCE_FN,
+            device=cp.DEVICE,
         )
 
         # Checkpoint model at a given frequency if requested
-        if CHECKPOINT_FREQ:
-            if (epoch + 1) % CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
+        if cp.CHECKPOINT_FREQ:
+            if (epoch + 1) % cp.CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
                 checkpoint = {
                     "state_dict": model.state_dict(),
-                    "optimizer": OPTIMIZER.state_dict(),
+                    "optimizer": cp.OPTIMIZER.state_dict(),
                 }
                 utils.save_checkpoint(
                     state=checkpoint,
-                    target_dir=SAVE_MODEL_DIR,
-                    model_name=SAVE_MODEL_NAME,
+                    target_dir=cp.SAVE_MODEL_DIR,
+                    model_name=cp.SAVE_MODEL_NAME,
                 )
 
         # Print out epoch number, loss and performance for this epoch
@@ -142,35 +142,37 @@ def main():
         results["test_perform"].append(test_perform)
 
     # Save the model with help from utils.py
-    if NUM_EPOCHS % CHECKPOINT_FREQ != 0:  # Don't save when final epoch was checkpoint
+    if (
+        cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
+    ):  # Don't save when final epoch was checkpoint
         final_state = {
             "state_dict": model.state_dict(),
-            "optimizer": OPTIMIZER.state_dict(),
+            "optimizer": cp.OPTIMIZER.state_dict(),
         }
         utils.save_checkpoint(
             state=final_state,
-            target_dir=SAVE_MODEL_DIR,
-            model_name=SAVE_MODEL_NAME,
+            target_dir=cp.SAVE_MODEL_DIR,
+            model_name=cp.SAVE_MODEL_NAME,
         )
 
     # Save loss and performance during training
     utils.save_train_results(
         dict_results=results,
-        target_dir=SAVE_MODEL_DIR,
-        filename=f"results_{SAVE_MODEL_NAME}.tsv",
+        target_dir=cp.SAVE_MODEL_DIR,
+        filename=f"results_{cp.SAVE_MODEL_NAME}.tsv",
     )
 
     # Save a torchinfo summary of the network
     utils.save_network_summary(
         model=model,
-        target_dir=SAVE_MODEL_DIR,
-        filename=f"summary_{SAVE_MODEL_NAME}.txt",
+        target_dir=cp.SAVE_MODEL_DIR,
+        filename=f"summary_{cp.SAVE_MODEL_NAME}.txt",
     )
 
     # Save the config
     utils.save_config(
-        target_dir=SAVE_MODEL_DIR,
-        filename=f"config_{SAVE_MODEL_NAME}.json",
+        target_dir=cp.SAVE_MODEL_DIR,
+        filename=f"config_{cp.SAVE_MODEL_NAME}.json",
     )
 
 
