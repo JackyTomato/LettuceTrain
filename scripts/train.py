@@ -65,7 +65,7 @@ def main():
         cp.BATCH_SIZE, cp.NUM_WORKERS, cp.PIN_MEMORY
     )
 
-    # Create model with help from model_builder.py
+    # Create model with help from model_builder.py and send to device
     model = cp.MODEL_TYPE(
         n_classes=cp.N_CLASSES,
         n_channels=cp.N_CHANNELS,
