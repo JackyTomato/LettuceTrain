@@ -1,6 +1,6 @@
 # LettuceTrain
 
-This is a repository used to develop and train deep learning models for a lettuce image dataset with PyTorch.
+A repository used to develop and train deep learning models for a lettuce image dataset with PyTorch.
 
 ## Conda environment
 In order to train models on GPUs, PyTorch should be installed with CUDA support. This requires you to install PyTorch in a specific way.
