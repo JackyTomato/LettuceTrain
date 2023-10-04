@@ -16,3 +16,11 @@ As an example, here is my install command, for package builds made for Python 3.
 ```
 mamba create -n pytorch_cuda12.1 pytorch=2.1.0=py3.11_cuda12.1_cudnn8.9.2_0 torchvision=0.16.0=py311_cu121 pytorch-cuda=12.1 -c pytorch -c nvidia
 ```
+This is the core of the environment needed to use the repo!. The additional packages that you would need are:
+```
+torchinfo
+scikit-learn
+tqdm
+albumentations
+json -c jmcmurray
+```
