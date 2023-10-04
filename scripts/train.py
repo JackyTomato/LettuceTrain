@@ -72,7 +72,7 @@ def main():
         bb_name=cp.BB_NAME,
         bb_weights=cp.BB_WEIGHTS,
         bb_freeze=cp.BB_FREEZE,
-    )
+    ).to(cp.DEVICE)
 
     # Start training with help from engine.py
     # Load model if requested
