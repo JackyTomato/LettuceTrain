@@ -5,7 +5,6 @@ and loading thre train & test datasets.
 TODO:
     - Allow selection for classification, regression or segmentation datasets
     - Tweak code to fit the dataset
-    - Merge loaders to get_loaders
     - Allow for separate transforms for train and test
     - Test to see if it properly loads dataets
 """
@@ -91,17 +90,61 @@ class LettuceDataset(Dataset):
 
 
 # Define data loaders for training and testing
-def load_train_data(augs, batch_size):
-    train_dataset = LettuceDataset(root, is_train=True, transforms=augs)
-    train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=2
-    )
-    return train_dataloader
+def get_loaders(
+    dataset,
+    img_dir,
+    label_dir,
+    augs,
+    batch_size,
+    num_workers,
+    train_frac=0.75,
+    pin_memory=True,
+):
+    """Creates PyTorch DataLoaders for train and test dataset.
 
+    Args:
+        dataset (torch.utils.data.Dataset): Dataset class inherited from PyTorch's Dataset class.
+        img_dir (string): Path of directory containing the image data.
+        label_dir (string): Path of directory containing the labels of the image data.
+        augs (albumentations.Compose/transforms.Compose): Albumentations or PyTorch transforms (composed).
+        batch_size (int): Number of samples in each batch.
+        num_workers (int): Number of worker processes for data loading.
+        train_frac (float, optional): Fraction of data to be used for training. Defaults to 0.75.
+        pin_memory (bool, optional): Speeds up data transfer from CPU to GPU. Defaults to True.
 
-def load_test_data(augs, batch_size):
-    test_dataset = LettuceDataset(root, is_train=False, transforms=augs)
-    test_dataloader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False, num_workers=2
+    Returns:
+        _type_: _description_
+    """
+    # Get train and test datasets
+    train_ds = dataset(
+        img_dir=img_dir,
+        label_dir=label_dir,
+        transform=augs,
+        train_frac=train_frac,
+        is_train=True,
     )
-    return test_dataloader
+    test_ds = dataset(
+        img_dir=img_dir,
+        label_dir=label_dir,
+        transform=augs,
+        train_frac=train_frac,
+        is_train=False,
+    )
+
+    # Create DataLoaders of datasets
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        shuffle=True,
+    )
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        shuffle=False,
+    )
+
+    return train_loader, test_loader
