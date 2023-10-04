@@ -32,13 +32,11 @@ import numpy as np
 import random
 from tqdm import tqdm
 
-try:
-    import data_setup, engine, model_builder, utils
-except:
-    new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
-    print(f"[INFO] Changing working directory to {new_cwd}")
-    os.chdir(new_cwd)
-    import data_setup, engine, model_builder, utils
+# Change cd to scripts and import other modules
+new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
+print(f"[INFO] Changing working directory to {new_cwd}")
+os.chdir(new_cwd)
+import data_setup, engine, model_builder
 
 # Import config setting variables from config_parser
 from config_parser import *

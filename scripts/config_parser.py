@@ -17,13 +17,11 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from json import load as json_load
 
-try:
-    import data_setup, engine, model_builder
-except:
-    new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
-    print(f"[INFO] Changing working directory to {new_cwd}")
-    os.chdir(new_cwd)
-    import data_setup, engine, model_builder
+# Change cd to scripts and import other modules
+new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
+print(f"[INFO] Changing working directory to {new_cwd}")
+os.chdir(new_cwd)
+import data_setup, engine, model_builder
 
 
 # .json parser for config.json
