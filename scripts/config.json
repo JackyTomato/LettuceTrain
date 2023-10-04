@@ -23,7 +23,7 @@
     "BB_WEIGHTS": "IMAGENET1K_V2",
     "BB_FREEZE": "True",
     "CHECKPOINT_FREQ": 2,
-    "SAVE_MODEL_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/model1",
+    "SAVE_MODEL_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/output/model1",
     "SAVE_MODEL_NAME": "test_model1.pth.tar",
-    "LOAD_MODEL_PATH": "/lustre/BIF/nobackup/to001/thesis_MBF/model1/test_model1.pth.tar"
+    "LOAD_MODEL_PATH": "/lustre/BIF/nobackup/to001/thesis_MBF/output/model1/test_model1.pth.tar"
 }
