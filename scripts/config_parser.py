@@ -31,7 +31,7 @@ def parse_json(filepath):
     """Parses the a .json file as a dictionary containing all the values.
 
     Args:
-        filepath (str): File path to the .json file
+        filepath (str): File path to the .json file.
     """
     # Parse config.json as dict with json's load function
     with open(filepath, "r") as json_file:
