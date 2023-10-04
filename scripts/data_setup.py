@@ -6,6 +6,7 @@ TODO:
     - Allow selection for classification, regression or segmentation datasets
     - Tweak code to fit the dataset
     - Merge loaders to get_loaders
+    - Allow for separate transforms for train and test
     - Test to see if it properly loads dataets
 """
 # Import statements
