@@ -2,7 +2,7 @@
 Functionality for training and testing
 
 TODO:
-    - Implement checkpointing in loop
+    - Implement checkpointing in batch_loop
     - Maybe add training plot
 """
 
@@ -46,11 +46,11 @@ def train_step(model, dataloader, loss_fn, performance_fn, optimizer, scaler, de
     # Setup train loss and train performance values
     train_loss, train_perform = 0, 0
 
-    # Setup tdqm loop for progress bar
-    loop = tqdm(dataloader)
+    # Setup tdqm loop for progress bar over batches
+    batch_loop = tqdm(dataloader)
 
     # Loop through data loader data batches
-    for batch, (data, labels) in enumerate(loop):
+    for batch, (data, labels) in enumerate(batch_loop):
         # Send data to target device
         data, labels = data.to(device), labels.to(device)
 
@@ -72,7 +72,7 @@ def train_step(model, dataloader, loss_fn, performance_fn, optimizer, scaler, de
         train_perform += performance_fn(pred_logits, labels)
 
         # Update tqdm loop
-        loop.set_postfix(loss=loss.item())
+        batch_loop.set_postfix(loss=loss.item())
 
     # Adjust metrics to get average loss and performance per batch
     train_loss = train_loss / len(dataloader)
