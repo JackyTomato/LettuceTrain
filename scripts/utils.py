@@ -2,7 +2,7 @@
 Contains various utility functions such as checkpointing and performance metrics.
 
 TODO:
-    - Config parser, use albumentations for transforms
+    - Move parse_config to graveyard
 """
 # Import functions
 import torch
