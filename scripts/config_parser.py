@@ -78,6 +78,3 @@ CHECKPOINT_FREQ = _config_dict["CHECKPOINT_FREQ"]
 SAVE_MODEL_DIR = _config_dict["SAVE_MODEL_DIR"]
 SAVE_MODEL_NAME = _config_dict["SAVE_MODEL_NAME"]
 LOAD_MODEL_PATH = _config_dict["LOAD_MODEL_PATH"]
-
-# Print succesful _config_dict load
-print("[INFO] Loading _config_dict.json was succesful!")
