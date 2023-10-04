@@ -7,7 +7,7 @@ E.g. the string "torch.optim.Adam" will be the PyTorch function torch.optim.Adam
 
 In "train.py" all variables that were assigned settings will be imported using
 "from config_parser import *". Variables that were not assigned settings
-are prefixed with "_" as to not be imported to train.py.
+are prefixed with "_" so they are not imported to train.py.
 """
 # Import functions
 import os
