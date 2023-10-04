@@ -49,9 +49,6 @@ SEED = config["SEED"]
 # Setup hyperparameters and other training specifics
 LEARNING_RATE = config["LEARNING_RATE"]
 NUM_EPOCHS = config["NUM_EPOCHS"]
-DATA_CLASS = config["DATA_CLASS"]
-DATALOADER_TRAIN = config["DATALOADER_TRAIN"]
-DATALOADER_TEST = config["DATALOADER_TEST"]
 OPTIMIZER = config["OPTIMIZER"]
 SCALER = config["SCALER"]
 LOSS_FN = config["LOSS_FN"]
@@ -63,6 +60,7 @@ NUM_WORKERS = config["NUM_WORKERS"]
 PIN_MEMORY = config["PIN_MEMORY"]
 
 # Setup data loading settings
+DATASET = config["DATA_CLASS"]
 IMG_DIR = config["IMG_DIR"]
 LABEL_DIR = config["LABEL_DIR"]
 TRAIN_FRAC = config["TRAIN_FRAC"]
@@ -93,6 +91,7 @@ def main():
 
     # Create DataLoaders with help from data_setup.py
     train_loader, test_loader, class_names = data_setup.get_loaders(
+        dataset=DATASET,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
         train_frac=TRAIN_FRAC,
@@ -189,19 +188,20 @@ def main():
     utils.save_train_results(
         dict_results=results,
         target_dir=SAVE_MODEL_DIR,
-        filename="results_" + SAVE_MODEL_NAME + ".tsv",
+        filename=f"results_{SAVE_MODEL_NAME}.tsv",
     )
 
     # Save a torchinfo summary of the network
     utils.save_network_summary(
         model=model,
         target_dir=SAVE_MODEL_DIR,
-        filename="summary_" + SAVE_MODEL_NAME + ".txt",
+        filename=f"summary_{SAVE_MODEL_NAME}.txt",
     )
 
     # Save the config
     utils.save_config(
-        target_dir=SAVE_MODEL_DIR, filename="config_" + SAVE_MODEL_NAME + ".json"
+        target_dir=SAVE_MODEL_DIR,
+        filename=f"config_{SAVE_MODEL_NAME}.json",
     )
 
 
