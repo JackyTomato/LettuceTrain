@@ -53,20 +53,23 @@ def main():
     np.random.seed(SEED)
 
     # Create DataLoaders with help from data_setup.py
-    train_loader, test_loader, class_names = data_setup.get_loaders(
-        dataset=DATASET,
-        img_dir=IMG_DIR,
-        label_dir=LABEL_DIR,
-        train_frac=TRAIN_FRAC,
-        augs=TRANSFORMS,
-        batch_size=BATCH_SIZE,
-        num_workers=NUM_WORKERS,
-        pin_memory=PIN_MEMORY,
+    # train_loader, test_loader = data_setup.get_loaders(
+    #     dataset=DATASET,
+    #     img_dir=IMG_DIR,
+    #     label_dir=LABEL_DIR,
+    #     train_frac=TRAIN_FRAC,
+    #     augs=TRANSFORMS,
+    #     batch_size=BATCH_SIZE,
+    #     num_workers=NUM_WORKERS,
+    #     pin_memory=PIN_MEMORY,
+    # )
+    train_loader, test_loader = data_setup.MNIST_digit_loaders(
+        BATCH_SIZE, NUM_WORKERS, PIN_MEMORY
     )
 
     # Create model with help from model_builder.py
     model = MODEL_TYPE(
-        n_classes=len(class_names),
+        n_classes=N_CLASSES,
         bb_name=BB_NAME,
         bb_weights=BB_WEIGHTS,
         bb_freeze=BB_FREEZE,
