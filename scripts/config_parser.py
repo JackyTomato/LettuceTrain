@@ -21,7 +21,7 @@ from json import load as json_load
 new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
 print(f"[INFO] Changing working directory to {new_cwd}")
 os.chdir(new_cwd)
-import data_setup, engine, model_builder
+import data_setup, engine, model_builder, utils
 
 
 # .json parser for config.json
