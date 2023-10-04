@@ -150,6 +150,7 @@ def save_network_summary(model, target_dir, filename, n_channels=3):
         model=model,
         input_size=(1, n_channels, 512, 512),
         col_names=["kernel_size", "input_size", "output_size", "num_params"],
+        verbose=0,
     )
     str_model_stats = str(model_stats)
 
