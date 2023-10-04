@@ -68,6 +68,7 @@ BATCH_SIZE = _config_dict["BATCH_SIZE"]
 # Setup model settings
 MODEL_TYPE = eval(_config_dict["MODEL_TYPE"])
 N_CLASSES = _config_dict["N_CLASSES"]
+N_CHANNELS = _config_dict["N_CHANNELS"]
 BB_NAME = _config_dict["BB_NAME"]
 BB_WEIGHTS = _config_dict["BB_WEIGHTS"]
 BB_FREEZE = eval(_config_dict["BB_FREEZE"])

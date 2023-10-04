@@ -9,14 +9,18 @@ TODO:
 # Import statements
 import torch
 import torch.nn as nn
-from torchinfo import summary
 import torchvision
 
 
 # Define nn.Module class for model
 class TipburnClassifier(nn.Module):
     def __init__(
-        self, n_classes, bb_name=None, bb_weights="IMAGENET1K_V1", bb_freeze=True
+        self,
+        n_classes,
+        n_channels=3,
+        bb_name=None,
+        bb_weights="IMAGENET1K_V1",
+        bb_freeze=True,
     ):
         """Creates tipburn classifier as PyTorch nn.Module class.
 
@@ -28,6 +32,7 @@ class TipburnClassifier(nn.Module):
 
         Args:
             n_classes (int): Numbers of classes to predict.
+            n_channels (int, optional): Number of input channels from data. Defaults to 3.
             bb_name (str, optional): Name of backbone network. Defaults to None.
             bb_weights (str, optional): Name of pretrained weights. Defaults to IMAGENET_1K_V1.
             bb_freeze (bool, optional): If true, freezes weights in backbone. Defaults to True.
@@ -52,6 +57,19 @@ class TipburnClassifier(nn.Module):
 
         # For ResNets
         if bb_name in ["resnet50", "wide_resnet50_2"]:
+            # Remember number of input features of second layer
+            out_features_bn1 = self.backbone.bn1.num_features
+
+            # Change input channels of first conv layer
+            self.backbone.conv1 = nn.Conv2d(
+                n_channels,
+                out_features_bn1,
+                kernel_size=(7, 7),
+                stride=(2, 2),
+                padding=(3, 3),
+                bias=False,
+            )
+
             # Remember number of output features of backbone
             out_features_bb = list(self.backbone.children())[-1].in_features
 
