@@ -12,7 +12,7 @@ TODO:
 import os
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
+from torchvision import transforms, datasets
 from PIL import Image
 from sklearn.model_selection import train_test_split
 
@@ -141,6 +141,46 @@ def get_loaders(
     )
     test_loader = DataLoader(
         test_ds,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        shuffle=False,
+    )
+
+    return train_loader, test_loader
+
+
+# MNIST handwritten digit dataset for testing classification
+def MNIST_digit_loaders(batch_size, num_workers, pin_memory=True):
+    train_loader = torch.utils.data.DataLoader(
+        datasets.MNIST(
+            "/lustre/BIF/nobackup/to001/thesis_MBF/data",
+            train=True,
+            download=True,
+            transform=transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.1307,), (0.3081,)),
+                ]
+            ),
+        ),
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        shuffle=True,
+    )
+    test_loader = torch.utils.data.DataLoader(
+        datasets.MNIST(
+            "/lustre/BIF/nobackup/to001/thesis_MBF/data",
+            train=False,
+            download=True,
+            transform=transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.1307,), (0.3081,)),
+                ]
+            ),
+        ),
         batch_size=batch_size,
         num_workers=num_workers,
         pin_memory=pin_memory,
