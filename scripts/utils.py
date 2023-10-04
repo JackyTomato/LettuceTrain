@@ -2,7 +2,6 @@
 Contains various utility functions such as checkpointing and performance metrics.
 
 TODO:
-    - Move parse_config to graveyard
 """
 # Import functions
 import torch
