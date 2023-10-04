@@ -9,7 +9,7 @@
     "DEVICE": "cuda",
     "NUM_WORKERS": 2,
     "PIN_MEMORY": "True",
-    "DATASET": "LettuceDataset",
+    "DATASET": "data_setup.LettuceDataset",
     "IMG_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/data/img",
     "LABEL_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/data/label",
     "TRAIN_FRAC": 0.75,
