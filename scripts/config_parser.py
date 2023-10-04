@@ -78,4 +78,5 @@ BB_FREEZE = eval(_config_dict["BB_FREEZE"])
 CHECKPOINT_FREQ = _config_dict["CHECKPOINT_FREQ"]
 SAVE_MODEL_DIR = _config_dict["SAVE_MODEL_DIR"]
 SAVE_MODEL_NAME = _config_dict["SAVE_MODEL_NAME"]
+LOAD_MODEL = eval(_config_dict["LOAD_MODEL"])
 LOAD_MODEL_PATH = _config_dict["LOAD_MODEL_PATH"]

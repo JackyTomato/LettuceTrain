@@ -77,7 +77,7 @@ def main():
 
     # Start training with help from engine.py
     # Load model if requested
-    if LOAD_MODEL_PATH:
+    if LOAD_MODEL == True:
         utils.load_checkpoint(checkpoint=LOAD_MODEL_PATH, model=model)
 
     # Prepare optimizer
