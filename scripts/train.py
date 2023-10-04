@@ -1,6 +1,8 @@
 """
 Trains a PyTorch model according to the user's configuration in "config.json".
 
+Currently only supports image classifiers.
+
 [WARNING!] The script should be run from the /scripts/ directory
 to make sure all file paths are correct. If you would still like to run
 from a different workin directory, adjust the variable 'new_cwd' in
@@ -58,6 +60,8 @@ def main():
         train_frac=TRAIN_FRAC,
         augs=TRANSFORMS,
         batch_size=BATCH_SIZE,
+        num_workers=NUM_WORKERS,
+        pin_memory=PIN_MEMORY,
     )
 
     # Create model with help from model_builder.py
@@ -85,8 +89,11 @@ def main():
         "test_perform": [],
     }
 
-    # Training loop for a number of epochs with tqdm progress bars
-    for epoch in tqdm(range(NUM_EPOCHS)):
+    # Setup tqdm loop for progress bar over epochs
+    epoch_loop = tqdm(range(NUM_EPOCHS))
+
+    # Training loop for a number of epochs
+    for epoch in epoch_loop:
         train_loss, train_perform = engine.train_step(
             model=model,
             dataloader=train_loader,
@@ -106,7 +113,7 @@ def main():
 
         # Checkpoint model at a given frequency if requested
         if CHECKPOINT_FREQ:
-            if (epoch + 1) % CHECKPOINT_FREQ == 0:  # Current epoch is epoch+1
+            if (epoch + 1) % CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
                 checkpoint = {
                     "state_dict": model.state_dict(),
                     "optimizer": OPTIMIZER.state_dict(),
@@ -119,7 +126,7 @@ def main():
 
         # Print out epoch number, loss and performance for this epoch
         print(
-            f"Epoch: {epoch+1} | "
+            f"Epoch: {epoch + 1} | "
             f"train_loss: {train_loss:.4f} | "
             f"train_perform: {train_perform:.4f} | "
             f"test_loss: {test_loss:.4f} | "
