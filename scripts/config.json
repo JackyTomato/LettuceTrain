@@ -17,7 +17,7 @@
         "A.Resize(height=512, width=512)",
         "ToTensorV2()"
     ],
-    "BATCH_SIZE": 10,
+    "BATCH_SIZE": 64,
     "MODEL_TYPE": "model_builder.TipburnClassifier",
     "BB_NAME": "wide_resnet50_2",
     "BB_WEIGHTS": "IMAGENET1K_V2",
