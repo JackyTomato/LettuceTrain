@@ -132,13 +132,14 @@ def save_train_results(dict_results, target_dir, filename):
     print(f"[INFO] Saved training results to {filepath}")
 
 
-def save_network_summary(model, target_dir, filename):
+def save_network_summary(model, target_dir, filename, n_channels=3):
     """Writes a torchinfo summary and raw print summary of a model to a text file
 
     Args:
         model (nn.Module): PyTorch model to be summarized.
         target_dir (str): Target directory in which to write the file.
         filename (str): File name of the text file to be written.
+        n_channels (int, optional): Number of input channels to test. Defaults to 3.
     """
     # Create target directory
     target_dir_path = Path(target_dir)
@@ -147,7 +148,7 @@ def save_network_summary(model, target_dir, filename):
     # Get torchinfo summary of model
     model_stats = summary(
         model=model,
-        input_size=(1, 3, 512, 512),
+        input_size=(1, n_channels, 512, 512),
         col_names=["kernel_size", "input_size", "output_size", "num_params"],
     )
     str_model_stats = str(model_stats)

@@ -168,6 +168,7 @@ def main():
         model=model,
         target_dir=cp.SAVE_MODEL_DIR,
         filename=f"summary_{cp.SAVE_MODEL_NAME}.txt",
+        n_channels=cp.N_CHANNELS,
     )
 
     # Save the config
