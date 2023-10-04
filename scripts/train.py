@@ -1,7 +1,7 @@
 """
 Trains a PyTorch model according to the user's configuration in "config.json".
 
-[WARNING!] The script should be ran from the /scripts/ directory
+[WARNING!] The script should be run from the /scripts/ directory
 to make sure all file paths are correct. If you would still like to run
 from a different workin directory, adjust the variable 'new_cwd' in
 import statements to your /scripts/ file path.
@@ -15,8 +15,7 @@ Explanation of settings in config.json:
 
 TODO:
     - Add config.json functionality by parsing (separate script? make sure obj types correct)
-    - Think about what config.json settings to have for data class & loaders
-    - Think about how to allow customizability transforms
+    - Allow user to specify config locations from terminal with arg
     - Make torchvision summary extract input size from data
     - Also save loss and performance during training & testing
     - Also save model summary
@@ -39,47 +38,9 @@ except:
     os.chdir(new_cwd)
     import data_setup, engine, model_builder, utils
 
+# Import config setting variables from config_parser
+from config_parser import *
 
-# Parse config.json to obtain all globals
-config = utils.parse_config("config.json")
-
-# Seed
-SEED = config["SEED"]
-
-# Setup hyperparameters and other training specifics
-LEARNING_RATE = config["LEARNING_RATE"]
-NUM_EPOCHS = config["NUM_EPOCHS"]
-OPTIMIZER = config["OPTIMIZER"]
-SCALER = config["SCALER"]
-LOSS_FN = config["LOSS_FN"]
-PERFORMANCE_FN = config["PERFORMANCE_FN"]
-
-# Setup device settings
-DEVICE = config["DEVICE"]
-NUM_WORKERS = config["NUM_WORKERS"]
-PIN_MEMORY = config["PIN_MEMORY"]
-
-# Setup data loading settings
-DATASET = config["DATA_CLASS"]
-IMG_DIR = config["IMG_DIR"]
-LABEL_DIR = config["LABEL_DIR"]
-TRAIN_FRAC = config["TRAIN_FRAC"]
-TRANSFORMS = config["TRANSFORMS"]
-BATCH_SIZE = config["BATCH_SIZE"]
-
-# Setup model settings
-MODEL_TYPE = config["MODEL_TYPE"]
-BB_NAME = config["BB_NAME"]
-BB_WEIGHTS = config["BB_WEIGHTS"]
-BB_FREEZE = config["BB_FREEZE"]
-
-# Setup checkpointing, save and load
-CHECKPOINT_FREQ = config["CHECKPOINT_FREQ"]
-SAVE_MODEL_DIR = config["SAVE_MODEL_DIR"]
-SAVE_MODEL_NAME = config["SAVE_MODEL_NAME"]
-LOAD_MODEL_PATH = config["LOAD_MODEL_PATH"]
-
-# Print succesful config load
 print("[INFO] Loading config.json was succesful!")
 
 
