@@ -4,6 +4,7 @@ Contains various utility functions such as checkpointing and performance metrics
 TODO:
 """
 # Import functions
+import os
 import torch
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
@@ -35,7 +36,7 @@ def save_checkpoint(state, target_dir, model_name):
     assert model_name.endswith(
         (".pth", ".pt", ".pth.tar", "pt.tar")
     ), "model_name should end with '.pth', '.pt', '.pth.tar' or 'pt.tar'"
-    model_save_path = target_dir_path / model_name
+    model_save_path = os.path.join(target_dir_path, model_name)
 
     # Save the model state_dict()
     torch.save(obj=state, f=model_save_path)
@@ -49,9 +50,8 @@ def load_checkpoint(checkpoint, model):
         checkpoint (str): File of saved model state including path if necessary.
         model (nn.Module): PyTorch model on which the state will be applied.
     """
-    print(f"[INFO] Opening model state: {checkpoint}")
     model.load_state_dict(torch.load(checkpoint)["state_dict"])
-    print(f"[INFO] Loading model state {checkpoint} was succesful!")
+    print(f"[INFO] Loaded model state {checkpoint}")
 
 
 # Performance metrics
@@ -112,7 +112,7 @@ def save_train_results(dict_results, target_dir, filename):
     num_items = len(dict_results["epoch"])
 
     # Write dictonary to file
-    filepath = target_dir + "/" + filename
+    filepath = os.path.join(target_dir, filename)
     with open(filepath, "w") as f:
         # Write header
         header = "\t".join(sorted_keys)
@@ -157,7 +157,7 @@ def save_network_summary(model, target_dir, filename, n_channels=3):
     str_raw_model = str(model)
 
     # Write model summaries to file
-    filepath = target_dir + "/" + filename
+    filepath = os.path.join(target_dir, filename)
     with open(filepath, "w") as f:
         f.write("[TORCHINFO SUMMARY]")
         f.write("\n")
@@ -182,6 +182,6 @@ def save_config(target_dir, filename, config_name="config.json"):
     target_dir_path.mkdir(parents=True, exist_ok=True)
 
     # Copy config to new file
-    filepath = target_dir + "/" + filename
+    filepath = os.path.join(target_dir, filename)
     copyfile(config_name, filepath)
     print(f"[INFO] Saved config.json to {filepath}")
