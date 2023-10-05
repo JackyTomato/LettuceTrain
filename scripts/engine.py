@@ -71,7 +71,7 @@ def train_step(model, dataloader, loss_fn, performance_fn, optimizer, scaler, de
         train_perform += performance_fn(pred_logits, labels)
 
         # Update tqdm loop
-        batch_loop.set_postfix(train_loss=loss.item())
+        batch_loop.set_postfix(train_loss=f"{loss.item():.4f}")
 
     # Adjust metrics to get average loss and performance per batch
     train_loss = train_loss / len(dataloader)
