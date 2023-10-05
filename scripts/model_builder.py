@@ -16,9 +16,9 @@ import torchvision
 class TipburnClassifier(nn.Module):
     def __init__(
         self,
+        bb_name,
         n_classes,
         n_channels=3,
-        bb_name=None,
         bb_weights="IMAGENET1K_V1",
         bb_freeze=True,
     ):
@@ -31,9 +31,9 @@ class TipburnClassifier(nn.Module):
             resnet50, wide_resnet50_2
 
         Args:
+            bb_name (str): Name of backbone network as in torchvision.models.
             n_classes (int): Numbers of classes to predict.
             n_channels (int, optional): Number of input channels from data. Defaults to 3.
-            bb_name (str, optional): Name of backbone network. Defaults to None.
             bb_weights (str, optional): Name of pretrained weights. Defaults to IMAGENET_1K_V1.
             bb_freeze (bool, optional): If true, freezes weights in backbone. Defaults to True.
 
@@ -44,16 +44,13 @@ class TipburnClassifier(nn.Module):
         self.n_classes = n_classes
 
         # Set backbone
-        if bb_name is not None:
-            # Allows for different models and pretrained weights
-            backbone_call = f'torchvision.models.{bb_name}(weights="{bb_weights}")'
-            self.backbone = eval(backbone_call)
+        # Allows for different models and pretrained weights
+        backbone_call = f'torchvision.models.{bb_name}(weights="{bb_weights}")'
+        self.backbone = eval(backbone_call)
 
-            # Freeze weights in backbone
-            for param in self.backbone.parameters():
-                param.requires_grad = not bb_freeze
-        else:
-            raise Exception("No argument for bb_name, a backbone is mandatory")
+        # Freeze weights in backbone
+        for param in self.backbone.parameters():
+            param.requires_grad = not bb_freeze
 
         # For ResNets
         if bb_name in ["resnet50", "wide_resnet50_2"]:
