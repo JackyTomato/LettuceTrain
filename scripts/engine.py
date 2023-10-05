@@ -2,7 +2,6 @@
 Functionality for training and testing
 
 TODO:
-    - Implement checkpointing in batch_loop
     - Maybe add training plot
 """
 

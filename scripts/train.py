@@ -15,13 +15,9 @@ device, data loading, model and save settings.
 Explanation of settings in config.json:
 
 
-TODO:
-    - Add config.json functionality by parsing (separate script? make sure obj types correct)
+TODO:)
     - Allow user to specify config locations from terminal with arg
-    - Make torchvision summary extract input size from data
-    - Also save loss and performance during training & testing
-    - Also save model summary
-    - Also save config
+    - Make torchvision summary extract input image size from data
     - Create support for more than just classifiers (separate scripts?)
 """
 

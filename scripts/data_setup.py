@@ -3,8 +3,7 @@ Functionality for creating lettuce dataset as PyTorch Dataset
 and loading thre train & test datasets.
 
 TODO:
-    - Allow selection for classification, regression or segmentation datasets
-    - Tweak code to fit the dataset
+    - Make dataset class for lettuce
     - Allow for separate transforms for train and test
     - Test to see if it properly loads dataets
 """
