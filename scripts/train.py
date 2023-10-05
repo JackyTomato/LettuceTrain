@@ -1,11 +1,14 @@
 """
 Trains a PyTorch model according to the user's configuration in "config.json".
 
+For a complete explanation of the framework and how to use it, check out:
+    https://github.com/JackyTomato/LettuceTrain
+
 Currently only supports image classifiers.
 
-[WARNING!] The script should be run from the /scripts/ directory
+The script should be run from the /scripts/ directory
 to make sure all file paths are correct. If you would still like to run
-from a different workin directory, adjust the variable 'new_cwd' in
+from a different working directory, adjust the variable 'new_cwd' in
 import statements to your /scripts/ file path.
 
 The script uses a parsed config.json file from config_parser in
@@ -20,30 +23,30 @@ Example of config.json with brief explanations as comments:
     "OPTIMIZER": "torch.optim.AdamW", # torch.optim, PyTorch optimizer class
     "SCALER": "torch.cuda.amp.GradScaler()", # torch.cuda.amp, PyTorch scaler class
     "LOSS_FN": "nn.CrossEntropyLoss()", # torch.nn, PyTorch loss class
-    "PERFORMANCE_FN": "utils.class_accuracy", function, a performance metric function
-    "DEVICE": "cuda",
-    "NUM_WORKERS": 4,
-    "PIN_MEMORY": "True",
-    "DATA_CLASS": "data_setup.LettuceDataset",
-    "IMG_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/data/img",
-    "LABEL_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/data/label",
-    "TRAIN_FRAC": 0.75,
+    "PERFORMANCE_FN": "utils.class_accuracy", # function, a performance metric function
+    "DEVICE": "cuda", # string, device to train "cuda" (GPU) or "cpu"
+    "NUM_WORKERS": 4, # int, number of worker processes for data loading
+    "PIN_MEMORY": "True", # bool, if True speeds up data transfer from CPU to GPU
+    "DATA_CLASS": "data_setup.LettuceDataset", torch.utils.data.Dataset, PyTorch dataset class
+    "IMG_DIR": "data/img", # string, filepath of dir containing the imaging data
+    "LABEL_DIR": "data/label", # string, filepath of dir containing image labels
+    "TRAIN_FRAC": 0.75, # float, fraction of dataset to use for training
     "TRANSFORMS": [
         "A.Resize(height=512, width=512)",
         "ToTensorV2()"
-    ],
-    "BATCH_SIZE": 2048,
-    "MODEL_TYPE": "model_builder.TipburnClassifier",
-    "N_CLASSES": 10,
-    "N_CHANNELS": 1,
-    "BB_NAME": "wide_resnet50_2",
-    "BB_WEIGHTS": "IMAGENET1K_V2",
-    "BB_FREEZE": "True",
-    "CHECKPOINT_FREQ": 2,
-    "SAVE_MODEL_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/output/model1",
-    "SAVE_MODEL_NAME": "test_model1.pth.tar",
-    "LOAD_MODEL": "False",
-    "LOAD_MODEL_PATH": "/lustre/BIF/nobackup/to001/thesis_MBF/output/model1/test_model1.pth.tar"
+    ], # list, list of albumentations or torchvision transforms for data augmentation
+    "BATCH_SIZE": 2048, # int, size of batches to load from data
+    "MODEL_TYPE": "model_builder.TipburnClassifier", # torch.nn.Module, PyTorch Module class
+    "N_CLASSES": 10, # int, number of output classes to predict
+    "N_CHANNELS": 1, # int, number of input channels of data
+    "BB_NAME": "wide_resnet50_2", # torchvision.models, model from torchvision.models for backbone
+    "BB_WEIGHTS": "IMAGENET1K_V2", # string, name weights for pretraining, "None" for no pretraining
+    "BB_FREEZE": "True", # bool, if True freezes weights of backbone
+    "CHECKPOINT_FREQ": 2, # int, the model will be saved every number of epochs equal to this value
+    "SAVE_MODEL_DIR": "/output/model1", # string, filepath to which to save the model to
+    "SAVE_MODEL_NAME": "test_model1.pth.tar", # string (.pt, .pth, .pt.tar, .pth.tar), filename to save model
+    "LOAD_MODEL": "False", # bool, if True loads saved model before training
+    "LOAD_MODEL_PATH": "output/model1/test_model1.pth.tar" # string, filepath of saved model to load
 }
 
 TODO:)
