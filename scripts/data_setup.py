@@ -10,6 +10,7 @@ TODO:
 # Import statements
 import os
 import torch
+import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets
 from PIL import Image
@@ -17,6 +18,72 @@ from sklearn.model_selection import train_test_split
 
 
 # Define Pytorch Dataset class for lettuce dataset
+class LettuceSegDataset(Dataset):
+    def __init__(
+        self, img_dir, mask_dir, is_train, train_frac=0.75, transform=None, seed=42
+    ):
+        self.transform = transform
+
+        # List all image filenames
+        image_names = os.listdir(img_dir)
+
+        # Obtain matching lists of image and mask filepaths
+        img_paths = []
+        mask_paths = []
+        for image_name in image_names:
+            # Obtain matching image and mask filepath
+            img_path = os.path.join(img_dir, image_name)
+            mask_path = os.path.join(mask_dir, image_name.replace(".png", "_mask.png"))
+
+            # Append filepaths
+            img_paths.append(img_path)
+            mask_path.append(mask_path)
+
+        # Split train and test sets
+        img_train, img_test, mask_train, mask_test = train_test_split(
+            img_paths, mask_paths, train_size=train_frac, random_state=seed
+        )
+
+        # Give train or test data as requested
+        if is_train:
+            self.img_paths = img_train
+            self.mask_paths = mask_train
+        else:
+            self.img_paths = img_test
+            self.mask_paths = mask_test
+
+    def __len__(self):
+        return len(self.img_paths)
+
+    def __getitem__(self, index):
+        # Retrieve image and mask, should be np.array for albumentations.transforms
+        img = np.array(Image.open(self.img_paths[index]).convert("RGB"))
+        mask = Image.open(self.mask_path[index])
+
+        # Assertions to check that everything is correct
+        assert isinstance(img, Image), "Image variable should be a PIL Image"
+        assert isinstance(
+            mask_paths, torch.Tensor
+        ), "Labels variable should be a torch tensor"
+        assert (
+            mask_paths.dtype == torch.float32
+        ), "Labels variable datatype should be float32"
+
+        if self.transforms is not None:
+            img = self.transforms(img)
+
+        image = np.array(Image.open(img_path).convert("RGB"))
+        mask = np.array(Image.open(mask_path).convert("L"), dtype=np.float32)
+        mask[mask == 255.0] = 1.0
+
+        if self.transform is not None:
+            augmentations = self.transform(image=image, mask=mask)
+            image = augmentations["image"]
+            mask = augmentations["mask"]
+
+        return image, mask
+
+
 class LettuceDataset(Dataset):
     def __init__(
         self, directory, train_frac=0.75, is_train=True, transforms=None, seed=42
@@ -24,13 +91,13 @@ class LettuceDataset(Dataset):
         """Creates lettuce dataset as a PyTorch Dataset class object
 
         Args:
-            directory (str): Path to file containing image names and labels.
+            directory (str): Path to file containing image names and mask_paths.
             train_frac (float): Proportion of dataset to be training data.
             is_train (bool, optional): _description_. Defaults to True.
             transforms (transforms.Compose, optional): Composed torchvision transformations. Defaults to None.
         """
         self.images = []
-        self.labels = []
+        self.mask_paths = []
         self.transforms = transforms
 
         with open(os.path.join(root, "Leaf_counts.csv"), "r") as f:
@@ -38,19 +105,19 @@ class LettuceDataset(Dataset):
                 filename, n_leafs = line.rstrip().split(", ")
                 filename = filename + "_rgb.png"
                 img_path = os.path.join(directory, filename)
-                # Fill the corresponding lists with the images and labels
+                # Fill the corresponding lists with the images and mask_paths
                 self.images.append(img_path)
-                self.labels.append(n_leafs)
+                self.mask_paths.append(n_leafs)
 
         X_train, X_test, y_train, y_test = train_test_split(
-            self.images, self.labels, train_size=train_frac, random_state=seed
+            self.images, self.mask_paths, train_size=train_frac, random_state=seed
         )
         if is_train:
             self.images = X_train
-            self.labels = y_train
+            self.mask_paths = y_train
         else:
             self.images = X_test
-            self.labels = y_test
+            self.mask_paths = y_test
 
     def __len__(self):
         """Returns number of images in dataset
@@ -61,7 +128,7 @@ class LettuceDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
-        """Returns images and labels in dataset
+        """Returns images and mask_paths in dataset
 
         Args:
             idx (_type_): _description_
@@ -71,21 +138,21 @@ class LettuceDataset(Dataset):
         """
         # Retrieve image and label
         img = Image.open(self.images[idx])
-        labels = torch.tensor(int(self.labels[idx]), dtype=torch.float32)
+        mask_paths = torch.tensor(int(self.mask_paths[idx]), dtype=torch.float32)
 
         # Assertions to check that everything is correct
         assert isinstance(img, Image), "Image variable should be a PIL Image"
         assert isinstance(
-            labels, torch.Tensor
+            mask_paths, torch.Tensor
         ), "Labels variable should be a torch tensor"
         assert (
-            labels.dtype == torch.float32
+            mask_paths.dtype == torch.float32
         ), "Labels variable datatype should be float32"
 
         if self.transforms is not None:
             img = self.transforms(img)
 
-        return img, labels
+        return img, mask_paths
 
 
 # Define data loaders for training and testing
@@ -105,7 +172,7 @@ def get_loaders(
     Args:
         dataset (torch.utils.data.Dataset): Dataset class inherited from PyTorch's Dataset class.
         img_dir (string): Path of directory containing the image data.
-        label_dir (string): Path of directory containing the labels of the image data.
+        label_dir (string): Path of directory containing the mask_paths of the image data.
         train_augs (albumentations.Compose/transforms.Compose): Albumentations or PyTorch transforms for train.
         test_augs (albumentations.Compose/transforms.Compose): Albumentations or PyTorch transforms for test.
         batch_size (int): Number of samples in each batch.
@@ -120,16 +187,16 @@ def get_loaders(
     train_ds = dataset(
         img_dir=img_dir,
         label_dir=label_dir,
-        transform=train_augs,
         train_frac=train_frac,
         is_train=True,
+        transform=train_augs,
     )
     test_ds = dataset(
         img_dir=img_dir,
         label_dir=label_dir,
-        transform=test_augs,
         train_frac=train_frac,
         is_train=False,
+        transform=test_augs,
     )
 
     # Create DataLoaders of datasets
