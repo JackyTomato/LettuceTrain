@@ -12,7 +12,7 @@ are prefixed with "_" so they are not imported to train.py.
 TODO:
     - Instead of .json make more readable .txt file to parse
 """
-# Import functions
+# Import statements
 import os
 import torch
 import torch.nn as nn
@@ -20,11 +20,15 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from json import load as json_load
 
-# Change cd to scripts and import other modules
-new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
-print(f"[INFO] Changing working directory to {new_cwd}")
-os.chdir(new_cwd)
-import data_setup, engine, model_builder, utils
+# Import supporting modules
+if "scripts" in os.getcwd():
+    import data_setup, engine, model_builder, utils
+else:
+    # Change wd to scripts if cwd is not scripts
+    new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
+    print(f"[INFO] Changing working directory to {new_cwd}")
+    os.chdir(new_cwd)
+    import data_setup, engine, model_builder, utils
 
 
 # .json parser for config.json

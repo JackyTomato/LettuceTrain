@@ -8,12 +8,43 @@ to make sure all file paths are correct. If you would still like to run
 from a different workin directory, adjust the variable 'new_cwd' in
 import statements to your /scripts/ file path.
 
-The script uses a config.json file in the /scripts/ directory to obtain
-all the necessary information. The config includes seed, hyperparameters,
-device, data loading, model and save settings.
+The script uses a parsed config.json file from config_parser in
+the /scripts/ directory to obtain all the necessary information.
+The config includes seed, hyperparameters, device, data loading,
+model and save settings.
 
-Explanation of settings in config.json:
-
+Example of config.json with brief explanations as comments:
+    "SEED": 42, # int, random seed used for reproducbility
+    "LEARNING_RATE": # 1e-2, float, learning rate
+    "NUM_EPOCHS": 4, # int, number of epochs
+    "OPTIMIZER": "torch.optim.AdamW", # torch.optim, PyTorch optimizer class
+    "SCALER": "torch.cuda.amp.GradScaler()", # torch.cuda.amp, PyTorch scaler class
+    "LOSS_FN": "nn.CrossEntropyLoss()", # torch.nn, PyTorch loss class
+    "PERFORMANCE_FN": "utils.class_accuracy", function, a performance metric function
+    "DEVICE": "cuda",
+    "NUM_WORKERS": 4,
+    "PIN_MEMORY": "True",
+    "DATA_CLASS": "data_setup.LettuceDataset",
+    "IMG_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/data/img",
+    "LABEL_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/data/label",
+    "TRAIN_FRAC": 0.75,
+    "TRANSFORMS": [
+        "A.Resize(height=512, width=512)",
+        "ToTensorV2()"
+    ],
+    "BATCH_SIZE": 2048,
+    "MODEL_TYPE": "model_builder.TipburnClassifier",
+    "N_CLASSES": 10,
+    "N_CHANNELS": 1,
+    "BB_NAME": "wide_resnet50_2",
+    "BB_WEIGHTS": "IMAGENET1K_V2",
+    "BB_FREEZE": "True",
+    "CHECKPOINT_FREQ": 2,
+    "SAVE_MODEL_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/output/model1",
+    "SAVE_MODEL_NAME": "test_model1.pth.tar",
+    "LOAD_MODEL": "False",
+    "LOAD_MODEL_PATH": "/lustre/BIF/nobackup/to001/thesis_MBF/output/model1/test_model1.pth.tar"
+}
 
 TODO:)
     - Allow user to specify config locations from terminal with arg
@@ -28,14 +59,17 @@ import numpy as np
 import random
 from tqdm import tqdm
 
-# Change cd to scripts and import other modules
-new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
-print(f"[INFO] Changing working directory to {new_cwd}")
-os.chdir(new_cwd)
-import data_setup, engine, model_builder, utils
-
-# Import config setting variables from config_parser
-import config_parser as cp
+# Import supporting modules
+if "scripts" in os.getcwd():
+    import data_setup, engine, model_builder, utils
+    import config_parser as cp
+else:
+    # Change wd to scripts if cwd is not scripts
+    new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
+    print(f"[INFO] Changing working directory to {new_cwd}")
+    os.chdir(new_cwd)
+    import data_setup, engine, model_builder, utils
+    import config_parser as cp
 
 print("[INFO] Loading config.json was succesful!")
 
