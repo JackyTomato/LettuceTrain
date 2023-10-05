@@ -69,7 +69,8 @@ DATASET = eval(_config_dict["DATA_CLASS"])
 IMG_DIR = _config_dict["IMG_DIR"]
 LABEL_DIR = _config_dict["LABEL_DIR"]
 TRAIN_FRAC = _config_dict["TRAIN_FRAC"]
-TRANSFORMS = A.Compose([eval(_tf) for _tf in _config_dict["TRANSFORMS"]])
+TRAIN_TRANSFORMS = A.Compose([eval(_tf) for _tf in _config_dict["TRAIN_TRANSFORMS"]])
+TEST_TRANSFORMS = A.Compose([eval(_tf) for _tf in _config_dict["TEST_TRANSFORMS"]])
 BATCH_SIZE = _config_dict["BATCH_SIZE"]
 
 # Setup model settings

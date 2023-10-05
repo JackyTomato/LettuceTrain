@@ -93,7 +93,8 @@ def get_loaders(
     dataset,
     img_dir,
     label_dir,
-    augs,
+    train_augs,
+    test_augs,
     batch_size,
     num_workers,
     train_frac=0.75,
@@ -105,7 +106,8 @@ def get_loaders(
         dataset (torch.utils.data.Dataset): Dataset class inherited from PyTorch's Dataset class.
         img_dir (string): Path of directory containing the image data.
         label_dir (string): Path of directory containing the labels of the image data.
-        augs (albumentations.Compose/transforms.Compose): Albumentations or PyTorch transforms (composed).
+        train_augs (albumentations.Compose/transforms.Compose): Albumentations or PyTorch transforms for train.
+        test_augs (albumentations.Compose/transforms.Compose): Albumentations or PyTorch transforms for test.
         batch_size (int): Number of samples in each batch.
         num_workers (int): Number of worker processes for data loading.
         train_frac (float, optional): Fraction of data to be used for training. Defaults to 0.75.
@@ -118,14 +120,14 @@ def get_loaders(
     train_ds = dataset(
         img_dir=img_dir,
         label_dir=label_dir,
-        transform=augs,
+        transform=train_augs,
         train_frac=train_frac,
         is_train=True,
     )
     test_ds = dataset(
         img_dir=img_dir,
         label_dir=label_dir,
-        transform=augs,
+        transform=test_augs,
         train_frac=train_frac,
         is_train=False,
     )

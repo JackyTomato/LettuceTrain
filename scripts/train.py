@@ -85,14 +85,15 @@ def main():
 
     # Create DataLoaders with help from data_setup.py
     # train_loader, test_loader = data_setup.get_loaders(
-    #     dataset=DATASET,
-    #     img_dir=IMG_DIR,
-    #     label_dir=LABEL_DIR,
-    #     train_frac=TRAIN_FRAC,
-    #     augs=TRANSFORMS,
-    #     batch_size=BATCH_SIZE,
-    #     num_workers=NUM_WORKERS,
-    #     pin_memory=PIN_MEMORY,
+    #     dataset=cp.DATASET,
+    #     img_dir=cp.IMG_DIR,
+    #     label_dir=cp.LABEL_DIR,
+    #     train_frac=cp.TRAIN_FRAC,
+    #     train_augs=cp.TRAIN_TRANSFORMS,
+    #     test_augs=cp.TEST_TRANSFORMS,
+    #     batch_size=cp.BATCH_SIZE,
+    #     num_workers=cp.NUM_WORKERS,
+    #     pin_memory=cp.PIN_MEMORY,
     # )
     train_loader, test_loader = data_setup.MNIST_digit_loaders(
         cp.BATCH_SIZE, cp.NUM_WORKERS, cp.PIN_MEMORY
