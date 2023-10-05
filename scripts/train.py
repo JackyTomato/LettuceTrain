@@ -88,7 +88,7 @@ def main():
     }
 
     # Setup tqdm loop for progress bar over epochs
-    epoch_loop = tqdm(range(cp.NUM_EPOCHS))
+    epoch_loop = tqdm(range(cp.NUM_EPOCHS), desc="Epochs")
 
     # Training loop for a number of epochs
     for epoch in epoch_loop:

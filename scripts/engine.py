@@ -46,7 +46,7 @@ def train_step(model, dataloader, loss_fn, performance_fn, optimizer, scaler, de
     train_loss, train_perform = 0, 0
 
     # Setup tdqm loop for progress bar over batches
-    batch_loop = tqdm(dataloader)
+    batch_loop = tqdm(dataloader, desc="Batches")
 
     # Loop through data loader data batches
     for batch, (data, labels) in enumerate(batch_loop):
