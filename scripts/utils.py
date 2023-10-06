@@ -3,7 +3,7 @@
 Contains various utility functions such as checkpointing and performance metrics.
 
 TODO:
-    - Add 
+    - Add segmentation performance functions (if we cant just use PyTorch's)
 """
 # Import functions
 import os
