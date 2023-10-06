@@ -148,7 +148,7 @@ def main():
         )
 
         # Checkpoint model at a given frequency if requested
-        if cp.CHECKPOINT_FREQ:
+        if cp.CHECKPOINT_FREQ is not None:
             if (epoch + 1) % cp.CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
                 checkpoint = {
                     "state_dict": model.state_dict(),
