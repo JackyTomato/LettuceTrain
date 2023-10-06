@@ -3,9 +3,7 @@ Functionality for creating lettuce dataset as PyTorch Dataset
 and loading thre train & test datasets.
 
 TODO:
-    - Make dataset class for lettuce
-    - Allow for separate transforms for train and test
-    - Test to see if it properly loads dataets
+    - Test to see if it properly loads lettuce data
 """
 # Import statements
 import os
@@ -22,6 +20,16 @@ class LettuceSegDataset(Dataset):
     def __init__(
         self, img_dir, mask_dir, is_train, train_frac=0.75, transform=None, seed=42
     ):
+        """Creates a PyTorch Dataset class of the lettuce segmantation dataset.
+
+        Args:
+            img_dir (str): Filepath of directory containing the images.
+            mask_dir (str): Filepath of directory  containing the segmentation masks.
+            is_train (bool): If true, gives train data. If false, gives test data.
+            train_frac (float, optional): Fraction of data that is train. Defaults to 0.75.
+            transform (albumentations.Compose, optional): Transformations for data aug. Defaults to None.
+            seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
+        """
         self.transform = transform
 
         # List all image filenames
@@ -57,31 +65,15 @@ class LettuceSegDataset(Dataset):
 
     def __getitem__(self, index):
         # Retrieve image and mask, should be np.array for albumentations.transforms
-        img = np.array(Image.open(self.img_paths[index]).convert("RGB"))
-        mask = Image.open(self.mask_path[index])
-
-        # Assertions to check that everything is correct
-        assert isinstance(img, Image), "Image variable should be a PIL Image"
-        assert isinstance(
-            mask_paths, torch.Tensor
-        ), "Labels variable should be a torch tensor"
-        assert (
-            mask_paths.dtype == torch.float32
-        ), "Labels variable datatype should be float32"
-
-        if self.transforms is not None:
-            img = self.transforms(img)
-
-        image = np.array(Image.open(img_path).convert("RGB"))
-        mask = np.array(Image.open(mask_path).convert("L"), dtype=np.float32)
-        mask[mask == 255.0] = 1.0
+        img = np.array(Image.open(self.img_paths[index]))
+        mask = np.array(Image.open(self.mask_path[index]))
 
         if self.transform is not None:
-            augmentations = self.transform(image=image, mask=mask)
-            image = augmentations["image"]
+            augmentations = self.transform(image=img, mask=mask)
+            img = augmentations["image"]
             mask = augmentations["mask"]
 
-        return image, mask
+        return img, mask
 
 
 class LettuceDataset(Dataset):
