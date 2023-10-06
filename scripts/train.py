@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Trains a PyTorch model according to the user's configuration in "config.json".
 

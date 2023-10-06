@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Functionality for training and testing
 

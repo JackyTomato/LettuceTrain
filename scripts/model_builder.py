@@ -1,10 +1,10 @@
+#!/usr/bin/env python3
 """
 Functionality for building models as nn.Module class.
 
 TODO:
-    - Come up with what kinda backbones/models I want
-    - Allow selection for different backbones
-    - Allow selection for different subsequent layers (or make preset for each backbone)
+    - Add TipburnSegmenter
+    - Think about what backbones to use for semantic segmentation
 """
 # Import statements
 import torch

@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
 """
 Contains various utility functions such as checkpointing and performance metrics.
 
 TODO:
+    - Add 
 """
 # Import functions
 import os

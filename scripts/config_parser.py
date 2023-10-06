@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Parses "_config_dict.json" to extract all settings as variables.
 
