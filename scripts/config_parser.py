@@ -80,10 +80,14 @@ N_CLASSES = _config_dict["N_CLASSES"]
 N_CHANNELS = _config_dict["N_CHANNELS"]
 BB_NAME = _config_dict["BB_NAME"]
 BB_WEIGHTS = _config_dict["BB_WEIGHTS"]
+if BB_WEIGHTS == "None":  # Allow for untrained backbone
+    BB_WEIGHTS = eval(BB_WEIGHTS)
 BB_FREEZE = eval(_config_dict["BB_FREEZE"])
 
 # Setup checkpointing, save and load
 CHECKPOINT_FREQ = _config_dict["CHECKPOINT_FREQ"]
+if CHECKPOINT_FREQ == "None":  # Allow for no checkpointing
+    CHECKPOINT_FREQ = eval(CHECKPOINT_FREQ)
 SAVE_MODEL_DIR = _config_dict["SAVE_MODEL_DIR"]
 SAVE_MODEL_NAME = _config_dict["SAVE_MODEL_NAME"]
 LOAD_MODEL = eval(_config_dict["LOAD_MODEL"])

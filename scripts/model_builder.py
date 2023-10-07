@@ -44,8 +44,11 @@ class TipburnClassifier(nn.Module):
         self.n_classes = n_classes
 
         # Set backbone
-        # Allows for different models and pretrained weights
-        backbone_call = f'torchvision.models.{bb_name}(weights="{bb_weights}")'
+        # Allows for different models and pretraining
+        if bb_weights is not None:
+            backbone_call = f'torchvision.models.{bb_name}(weights="{bb_weights}")'
+        else:
+            backbone_call = f"torchvision.models.{bb_name}(weights={bb_weights})"
         self.backbone = eval(backbone_call)
 
         # Freeze weights in backbone

@@ -25,12 +25,12 @@ Example of config.json with brief explanations as comments:
     "SCALER": "torch.cuda.amp.GradScaler()", # torch.cuda.amp, PyTorch scaler class
     "LOSS_FN": "nn.CrossEntropyLoss()", # torch.nn, PyTorch loss class
     "PERFORMANCE_FN": "utils.class_accuracy", # function, a performance metric function
-    "DEVICE": "cuda", # string, device to train "cuda" (GPU) or "cpu"
+    "DEVICE": "cuda", # str, device to train "cuda" (GPU) or "cpu"
     "NUM_WORKERS": 4, # int, number of worker processes for data loading
     "PIN_MEMORY": "True", # bool, if True speeds up data transfer from CPU to GPU
     "DATA_CLASS": "data_setup.LettuceDataset", torch.utils.data.Dataset, PyTorch dataset class
-    "IMG_DIR": "data/img", # string, filepath of dir containing the imaging data
-    "LABEL_DIR": "data/label", # string, filepath of dir containing image labels
+    "IMG_DIR": "data/img", # str, filepath of dir containing the imaging data
+    "LABEL_DIR": "data/label", # str, filepath of dir containing image labels
     "TRAIN_FRAC": 0.75, # float, fraction of dataset to use for training
     "TRANSFORMS": [
         "A.Resize(height=512, width=512)",
@@ -41,13 +41,13 @@ Example of config.json with brief explanations as comments:
     "N_CLASSES": 10, # int, number of output classes to predict
     "N_CHANNELS": 1, # int, number of input channels of data
     "BB_NAME": "wide_resnet50_2", # torchvision.models, model from torchvision.models for backbone
-    "BB_WEIGHTS": "IMAGENET1K_V2", # string, name weights for pretraining, "None" for no pretraining
+    "BB_WEIGHTS": "IMAGENET1K_V2", # str, name weights for pretraining, "None" for no pretraining
     "BB_FREEZE": "True", # bool, if True freezes weights of backbone
     "CHECKPOINT_FREQ": 2, # int, the model will be saved every number of epochs equal to this value
-    "SAVE_MODEL_DIR": "/output/model1", # string, filepath to which to save the model to
-    "SAVE_MODEL_NAME": "test_model1.pth.tar", # string (.pt, .pth, .pt.tar, .pth.tar), filename to save model
+    "SAVE_MODEL_DIR": "/output/model1", # str, filepath to which to save the model to
+    "SAVE_MODEL_NAME": "test_model1.pth.tar", # str (.pt, .pth, .pt.tar, .pth.tar), filename to save model
     "LOAD_MODEL": "False", # bool, if True loads saved model before training
-    "LOAD_MODEL_PATH": "output/model1/test_model1.pth.tar" # string, filepath of saved model to load
+    "LOAD_MODEL_PATH": "output/model1/test_model1.pth.tar" # str, filepath of saved model to load
 }
 
 TODO:)
