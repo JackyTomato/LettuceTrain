@@ -4,6 +4,7 @@ Functionality for training and testing
 
 TODO:
     - Maybe add training plot
+    - Save some test result images
 """
 
 # Import statements
