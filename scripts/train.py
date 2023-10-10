@@ -178,8 +178,18 @@ def main():
         results["test_perform"].append(test_perform)
 
     # Save the model with help from utils.py
-    if (
-        cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
+    if cp.CHECKPOINT_FREQ is None:
+        final_state = {
+            "state_dict": model.state_dict(),
+            "optimizer": cp.OPTIMIZER.state_dict(),
+        }
+        utils.save_checkpoint(
+            state=final_state,
+            target_dir=cp.SAVE_MODEL_DIR,
+            model_name=cp.SAVE_MODEL_NAME,
+        )
+    elif (
+        cp.cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
     ):  # Don't save when final epoch was checkpoint
         final_state = {
             "state_dict": model.state_dict(),
