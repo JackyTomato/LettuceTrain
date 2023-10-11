@@ -64,16 +64,13 @@ import random
 from tqdm import tqdm
 
 # Import supporting modules
-if "scripts" in os.getcwd():
-    import data_setup, engine, model_builder, utils
-    import config_parser as cp
-else:
+if "scripts" not in os.getcwd():
     # Change wd to scripts if cwd is not scripts
     new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
     print(f"[INFO] Changing working directory to {new_cwd}")
     os.chdir(new_cwd)
-    import data_setup, engine, model_builder, utils
-    import config_parser as cp
+import data_setup, engine, model_builder, utils
+import config_parser as cp
 
 print("[INFO] Loading config.json was succesful!")
 
@@ -99,6 +96,7 @@ def main():
     train_loader, test_loader = data_setup.MNIST_digit_loaders(
         cp.BATCH_SIZE, cp.NUM_WORKERS, cp.PIN_MEMORY
     )
+    print("[INFO] Data succesfully loaded!")
 
     # Create model with help from model_builder.py and send to device
     model = cp.MODEL_TYPE(
@@ -108,6 +106,7 @@ def main():
         bb_weights=cp.BB_WEIGHTS,
         bb_freeze=cp.BB_FREEZE,
     ).to(cp.DEVICE)
+    print("[INFO] Model initialized!")
 
     # Start training with help from engine.py
     # Load model if requested
