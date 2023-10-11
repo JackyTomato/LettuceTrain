@@ -150,7 +150,6 @@ def path_back_mask(rgb_im_path, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
     img = no_alpha(img)
     back_mask = water_hsv_thresh(img, n_seeds, h_th, s_th, v_th)
     back_mask = morphology.binary_opening(back_mask)
-    print(f"[INFO] Mask made for {rgb_im_path}!")
     return back_mask
 
 
