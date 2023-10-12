@@ -9,10 +9,13 @@ TODO:
 import os
 import torch
 import albumentations as A
+import numpy as np
 from albumentations.pytorch import ToTensorV2
 from torchinfo import summary
 from pathlib import Path
 from shutil import copyfile
+from skimage import io
+from PIL import Image
 
 
 # Checkpointing
@@ -187,3 +190,33 @@ def save_config(target_dir, filename, config_name="config.json"):
     filepath = os.path.join(target_dir, filename)
     copyfile(config_name, filepath)
     print(f"[INFO] Saved config.json to {filepath}")
+
+
+def save_img(img, target_dir, filename):
+    """Saves np.ndarray or PIL.Image.Image image object to a file.
+
+    Args:
+        img (np.ndarray/PIL.Image.Image): Image object to be saved.
+        target_dir (str): Target directory in which to save file.
+        filename (str): Name of file to which the image is saved.
+
+    Raises:
+        Exception: Image should be either a np.ndarray or a PIL.Image.Image.
+    """
+    # Create target directory
+    target_dir_path = Path(target_dir)
+    target_dir_path.mkdir(parents=True, exist_ok=True)
+
+    # Create filepath for writing the image file
+    filepath = os.path.join(target_dir, filename)
+
+    # Save img with skimage if np.ndarray
+    if type(img) is np.ndarray:
+        io.imsave(filepath, img)
+
+    # Save img with PIL if Image
+    elif type(img) is Image.Image:
+        img.save(filepath)
+
+    else:
+        raise Exception("Input image object should be np.ndarray or PIL.Image.Image")
