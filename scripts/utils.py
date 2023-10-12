@@ -4,6 +4,7 @@ Contains various utility functions such as checkpointing and performance metrics
 
 TODO:
     - Add segmentation performance functions (if we cant just use PyTorch's)
+    - Use os.path.splitext to clean up save filenames
 """
 # Import functions
 import os
