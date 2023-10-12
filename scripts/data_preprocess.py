@@ -251,10 +251,6 @@ def main():
             filepath = os.path.join(data_dir, image_name)
             filepaths.append(filepath)
 
-        # Only process first certain number of images in filepath
-        num_desired = 4
-        filepaths = filepaths[0:num_desired]
-
         # Multi-processed image processing
         num_cores = 4
 
