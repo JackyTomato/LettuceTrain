@@ -9,20 +9,21 @@ TODO:
 """
 
 # Import statements
-from skimage import io, color, filters, segmentation, util, morphology
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from skimage import io, color, filters, segmentation, util, morphology
 from multiprocessing.pool import Pool
 from tqdm import tqdm
 from functools import partial
-from concurrent.futures import ThreadPoolExecutor
-import imageio.plugins.pillow
+import utils
 
 
-# Remove alpha channel - author Chris Dijkstra
+# Remove alpha channel - adapted from Chris Dijkstra
 def no_alpha(rgb_im):
     """Removes the alpha channel of an RGB image with 4 channels
+
+    As color.rgba2rgb converts values to floats between 0 and 1
 
     Args:
         rgb_im (numpy.ndarray): 4 dimensional array representing an RGB image
@@ -30,12 +31,44 @@ def no_alpha(rgb_im):
     Returns:
         numpy.ndarray: 3 dimensional array representing an RGB image
     """
-    if rgb_im.shape[2] == 4:
-        alphaless = color.rgba2rgb(rgb_im)
+    assert rgb_im.shape[2] == 4, "Input RGB image doesn't have an alpha channel"
+
+    # Blend alpha channel
+    alphaless = color.rgba2rgb(rgb_im)
+
+    # Convert values from float64 back to uint8
+    alphaless = (alphaless * 255).astype(np.uint8)
     return alphaless
 
 
-# Define backgrond removal functions - author: Chris Dijkstra
+# Crop specific region - adapted from Chris Dijkstra
+def crop_region(image, centre, shape):
+    """Crops an image area of specified width and height around a central point
+
+    :param image: np.ndarray, matrix representing the image
+    :param centre: tuple, contains the x and y coordinate of the centre as
+        integers
+    :param shape: tuple, contains the height and width of the subregion in
+        pixels as integers
+    :return: The cropped region of the original image
+    """
+    shape_r = np.array(shape)
+    shape_r[shape_r % 2 == 1] += 1
+    if image.ndim == 2:
+        crop = image[
+            centre[1] - shape_r[1] // 2 : centre[1] + shape[1] // 2,
+            centre[0] - shape_r[0] // 2 : centre[0] + shape[0] // 2,
+        ]
+    else:
+        crop = image[
+            centre[1] - shape_r[1] // 2 : centre[1] + shape[1] // 2,
+            centre[0] - shape_r[0] // 2 : centre[0] + shape[0] // 2,
+            :,
+        ]
+    return crop
+
+
+# Define backgrond removal functions - adapted from: Chris Dijkstra
 def elevation_map(rgb_im):
     """Creates an elevation map of an RGB image based on sobel filtering
 
@@ -114,7 +147,7 @@ def water_hsv_thresh(rgb_im, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
         this value is marked as background
     :param v_th: float, the threshold for the saturation channel everything
         below this value is marked as background
-    :return: np.ndarray, 2D mask with the
+    :return: np.ndarray, 2D mask with boolean values
     """
     blurred = watershed_blur(rgb_im, n_seeds)
     hsv_blurred = color.rgb2hsv(blurred)
@@ -122,7 +155,43 @@ def water_hsv_thresh(rgb_im, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
     return mask.astype(int)
 
 
-# Define end-to-end background removal fucntion for multithread
+# Define end-to-end crop function for multi-processing
+def path_crop(rgb_im_path, centre, shape):
+    """Crops an image area of specified width and height around a central point from path
+
+    :param rgb_im_path: string, filepath to image
+    :param centre: tuple, contains the x and y coordinate of the centre as
+        integers
+    :param shape: tuple, contains the height and width of the subregion in
+        pixels as integers
+    :return: The cropped region of the original image
+    """
+    # Read file, if can't read file, function returns nothing
+    try:
+        img = io.imread(rgb_im_path)
+    except:
+        print(f"[ISSUE] {rgb_im_path} was unreadable")
+        return
+    img = no_alpha(img)
+
+    # Crop region
+    shape_r = np.array(shape)
+    shape_r[shape_r % 2 == 1] += 1
+    if img.ndim == 2:
+        crop = img[
+            centre[1] - shape_r[1] // 2 : centre[1] + shape[1] // 2,
+            centre[0] - shape_r[0] // 2 : centre[0] + shape[0] // 2,
+        ]
+    else:
+        crop = img[
+            centre[1] - shape_r[1] // 2 : centre[1] + shape[1] // 2,
+            centre[0] - shape_r[0] // 2 : centre[0] + shape[0] // 2,
+            :,
+        ]
+    return crop
+
+
+# Define end-to-end background removal function for multi-processing
 def path_back_mask(rgb_im_path, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
     """Masks background of image from the corresponding path
 
@@ -139,7 +208,7 @@ def path_back_mask(rgb_im_path, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
         this value is marked as background
     :param v_th: float, the threshold for the saturation channel everything
         below this value is marked as background
-    :return: np.ndarray, 2D mask with the
+    :return: np.ndarray, 2D mask with boolean values
     """
     # Read file, if can't read file, function returns nothing
     try:
@@ -148,72 +217,97 @@ def path_back_mask(rgb_im_path, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
         print(f"[ISSUE] {rgb_im_path} was unreadable")
         return
     img = no_alpha(img)
+
+    # Make background mask
     back_mask = water_hsv_thresh(img, n_seeds, h_th, s_th, v_th)
     back_mask = morphology.binary_opening(back_mask)
     return back_mask
 
 
 def main():
-    # Create filepaths
+    # Set directories
     data_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/img/RGB"
+    crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/img/crops"
+    mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/img/masks"
+
+    # Create filepaths of original images
     image_names = os.listdir(data_dir)
     filepaths = []
     for image_name in image_names:
         filepath = os.path.join(data_dir, image_name)
         filepaths.append(filepath)
 
-    # for image_name in image_names:
-    #     filepath = os.path.join(data_dir, image_name)
-    #     image = io.imread(filepath)
-    #     image = no_alpha(image)
-    #     plant_mask = water_hsv_thresh(image, 1500, s_th=0.25, v_th=0.2)
-    #     plant_mask = morphology.binary_opening(plant_mask)
-    #     print(f"{image_name} succesfully masked!")
+    # Only process first certain number of images in filepath
+    num_desired = 4
+    filepaths = filepaths[0:num_desired]
 
-    # Multi-processed background segmentation from filepaths
+    # Multi-processed image processing
     num_cores = 4
+
+    # Cropping from filepaths of original images
     with Pool(processes=num_cores) as pool:
-        prepped_mask = partial(path_back_mask, n_seeds=1500, s_th=0.25, v_th=0.2)
-        process_iter = pool.imap(func=prepped_mask, iterable=filepaths)
-        process_loop = tqdm(process_iter, total=len(filepaths), position=0, leave=False)
+        prepped_crop = partial(path_crop, centre=(2028, 1520), shape=(2412, 2412))
+        process_iter = pool.imap(func=prepped_crop, iterable=filepaths)
+        process_loop = tqdm(process_iter, total=len(filepaths))
+
+        # Iterate over completed masks
         count = 0
-        for mask in process_loop:
+        for crop in process_loop:
+            cur_image_name = image_names[count]
+            new_image_name = f"{os.path.splitext(cur_image_name)[0]}_crop.png"
+
+            # Update count
             count += 1
-            print(f"Image number {count} succesfully masked!")
 
-    # Multi-threaded background segmentation from filepaths
-    # num_cores = 2
-    # with ThreadPoolExecutor(max_workers=num_cores) as pool:
+            # Save succesful masks and skip unreadable images
+            try:
+                # Save mask
+                utils.save_img(
+                    img=crop,
+                    target_dir=crop_dir,
+                    filename=new_image_name,
+                )
+                print(
+                    f"[INFO] Image {cur_image_name} was succesfully cropped and saved to {new_image_name}!"
+                )
+            except:
+                print(f"[ISSUE] Image {cur_image_name} was unreadable and skipped")
+
+    # Create filepaths of crops
+    crop_names = os.listdir(crop_dir)
+    crop_paths = []
+    for crop_name in crop_names:
+        filepath = os.path.join(data_dir, crop_name)
+        crop_paths.append(crop_paths)
+
+    # Background segmentation from filepaths
+    # with Pool(processes=num_cores) as pool:
     #     prepped_mask = partial(path_back_mask, n_seeds=1500, s_th=0.25, v_th=0.2)
-    #     masks = list(
-    #         tqdm(
-    #             pool.map(prepped_mask, filepaths),
-    #             total=len(filepaths),
-    #             position=0,
-    #             leave=False,
-    #         )
-    #     )
+    #     process_iter = pool.imap(func=prepped_mask, iterable=filepaths)
+    #     process_loop = tqdm(process_iter, total=len(filepaths))
+
+    #     # Iterate over completed masks
     #     count = 0
-    #     for mask in masks:
+    #     for mask in process_loop:
+    #         cur_image_name = crop_names[count]
+    #         new_image_name = f"{os.path.splitext(cur_image_name)[0]}_mask.png"
+
+    #         # Update count
     #         count += 1
-    #         print(f"Image number {count} succesfully masked!")
 
-    # filename = "51-1-Lettuce_Correct_Tray_09-RGB-FishEyeCorrected.png"
-    # filepath = os.path.join(data_dir, filename)
-    # image = io.imread(filepath)
-    # image = no_alpha(image)
-
-    # # Background segmentation
-    # plant_mask = water_hsv_thresh(image, 1500, s_th=0.25, v_th=0.2)
-    # plant_mask = morphology.binary_opening(plant_mask)
-
-    # # Visualization
-    # fig, axes = plt.subplots(1, 2)
-    # axes[0].imshow(image)
-    # axes[0].set_title("RGB")
-    # axes[1].imshow(plant_mask)
-    # axes[1].set_title("Background mask")
-    # plt.show()
+    #         # Save succesful masks and skip unreadable images
+    #         try:
+    #             # Save mask
+    #             utils.save_img(
+    #                 img=mask,
+    #                 target_dir=mask_dir,
+    #                 filename=new_image_name,
+    #             )
+    #             print(
+    #                 f"[INFO] Image {cur_image_name} was succesfully masked and saved to {new_image_name}!"
+    #             )
+    #         except:
+    #             print(f"[ISSUE] Image {cur_image_name} was unreadable and skipped")
 
 
 if __name__ == "__main__":
