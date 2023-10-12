@@ -20,15 +20,7 @@ import torch.nn as nn
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from json import load as json_load
-
-# Import supporting modules
-if "scripts" not in os.getcwd():
-    # Change wd to scripts if cwd is not scripts
-    new_cwd = "/lustre/BIF/nobackup/to001/thesis_MBF/scripts"
-    print(f"[INFO] Changing working directory to {new_cwd}")
-    os.chdir(new_cwd)
 import data_setup, engine, model_builder, utils
-import config_parser as cp
 
 
 # .json parser for config.json
