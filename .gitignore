@@ -3,3 +3,4 @@ data/*
 output/*
 graveyard.py
 scripts/config.json
+scripts/first_nohup.txt
