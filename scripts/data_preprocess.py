@@ -3,9 +3,12 @@
 Preprocesses the raw imaging data for use in deep learning.
 
 TODO:
-    - Add plant cropper (get plant info data with coords from Alan)
-    - Add background removal (Chris' script, PlantCV, neural network?)
+    - Add cropping of invidual plants, need  coords
+    - Tweak background removal (seeds, HSV)
+    - Make background removal only keep largest object when crop single plant
+    - Figure out how to deal with tubes and shadows being included too
     - Figure out a way to deal with overlap (PlantCV, neural network?)
+    - Add argparse functionality for config
 """
 
 # Import statements
@@ -156,10 +159,11 @@ def water_hsv_thresh(rgb_im, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
 
 
 # Define end-to-end crop function for multi-processing
-def path_crop(rgb_im_path, centre, shape):
+def path_crop(rgb_im_path, rm_alpha, centre, shape):
     """Crops an image area of specified width and height around a central point from path
 
     :param rgb_im_path: string, filepath to image
+    :param rm_alpha: bool, if True removes alpha channel of image
     :param centre: tuple, contains the x and y coordinate of the centre as
         integers
     :param shape: tuple, contains the height and width of the subregion in
@@ -170,9 +174,9 @@ def path_crop(rgb_im_path, centre, shape):
     try:
         img = io.imread(rgb_im_path)
     except:
-        print(f"[ISSUE] {rgb_im_path} was unreadable")
         return
-    img = no_alpha(img)
+    if rm_alpha:
+        img = no_alpha(img)
 
     # Crop region
     shape_r = np.array(shape)
@@ -192,7 +196,7 @@ def path_crop(rgb_im_path, centre, shape):
 
 
 # Define end-to-end background removal function for multi-processing
-def path_back_mask(rgb_im_path, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
+def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
     """Masks background of image from the corresponding path
 
     Uses hsv thresholds after watershed averaging for background segmentation.
@@ -201,6 +205,7 @@ def path_back_mask(rgb_im_path, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
     as they require a single function from start to finish.
 
     :param rgb_im_path: str, path of RGB image
+    :param rm_alpha: bool, if True removes alpha channel of image
     :param n_seeds: int, number of initialized seeds for watershedding
     :param h_th: float, the threshold for the hue channel, everything below this
         value is marked as background
@@ -214,9 +219,9 @@ def path_back_mask(rgb_im_path, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
     try:
         img = io.imread(rgb_im_path)
     except:
-        print(f"[ISSUE] {rgb_im_path} was unreadable")
         return
-    img = no_alpha(img)
+    if rm_alpha:
+        img = no_alpha(img)
 
     # Make background mask
     back_mask = water_hsv_thresh(img, n_seeds, h_th, s_th, v_th)
@@ -225,89 +230,108 @@ def path_back_mask(rgb_im_path, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
 
 
 def main():
-    # Set directories
+    # Set config
     data_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/img/RGB"
     crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/img/crops"
     mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/img/masks"
+    CROP = True
+    CROP_POS = (2028, 1520)
+    CROP_SHAPE = (2412, 2412)
+    MASK = True
+    H_THRES = 0
+    S_THRES = 0.25
+    V_THRES = 0.2
 
-    # Create filepaths of original images
-    image_names = os.listdir(data_dir)
-    filepaths = []
-    for image_name in image_names:
-        filepath = os.path.join(data_dir, image_name)
-        filepaths.append(filepath)
+    # Crop original images
+    if CROP:
+        # Create filepaths of original images
+        image_names = os.listdir(data_dir)
+        filepaths = []
+        for image_name in image_names:
+            filepath = os.path.join(data_dir, image_name)
+            filepaths.append(filepath)
 
-    # Only process first certain number of images in filepath
-    num_desired = 4
-    filepaths = filepaths[0:num_desired]
+        # Only process first certain number of images in filepath
+        num_desired = 4
+        filepaths = filepaths[0:num_desired]
 
-    # Multi-processed image processing
-    num_cores = 4
+        # Multi-processed image processing
+        num_cores = 4
 
-    # Cropping from filepaths of original images
-    with Pool(processes=num_cores) as pool:
-        prepped_crop = partial(path_crop, centre=(2028, 1520), shape=(2412, 2412))
-        process_iter = pool.imap(func=prepped_crop, iterable=filepaths)
-        process_loop = tqdm(process_iter, total=len(filepaths))
+        # Cropping from filepaths of original images
+        with Pool(processes=num_cores) as pool:
+            prepped_crop = partial(
+                path_crop, rm_alpha=True, centre=CROP_POS, shape=CROP_SHAPE
+            )
+            process_iter = pool.imap(func=prepped_crop, iterable=filepaths)
+            process_loop = tqdm(
+                process_iter, desc="Image cropping", total=len(filepaths)
+            )
 
-        # Iterate over completed masks
-        count = 0
-        for crop in process_loop:
-            cur_image_name = image_names[count]
-            new_image_name = f"{os.path.splitext(cur_image_name)[0]}_crop.png"
+            # Iterate over completed masks
+            count = 0
+            for crop in process_loop:
+                cur_image_name = image_names[count]
+                new_image_name = f"{os.path.splitext(cur_image_name)[0]}_crop.png"
 
-            # Update count
-            count += 1
+                # Update count
+                count += 1
 
-            # Save succesful masks and skip unreadable images
-            try:
-                # Save mask
-                utils.save_img(
-                    img=crop,
-                    target_dir=crop_dir,
-                    filename=new_image_name,
-                )
-                print(
-                    f"[INFO] Image {cur_image_name} was succesfully cropped and saved to {new_image_name}!"
-                )
-            except:
-                print(f"[ISSUE] Image {cur_image_name} was unreadable and skipped")
+                # Save succesful masks and skip unreadable images
+                try:
+                    # Save mask
+                    utils.save_img(
+                        img=crop,
+                        target_dir=crop_dir,
+                        filename=new_image_name,
+                    )
+                except:
+                    print(f"[ISSUE] Image {cur_image_name} was unreadable and skipped")
 
-    # Create filepaths of crops
-    crop_names = os.listdir(crop_dir)
-    crop_paths = []
-    for crop_name in crop_names:
-        filepath = os.path.join(data_dir, crop_name)
-        crop_paths.append(crop_paths)
+    # Background mask cropped images
+    if MASK:
+        # Create filepaths of cropped images
+        crop_names = os.listdir(crop_dir)
+        crop_paths = []
+        for crop_name in crop_names:
+            crop_path = os.path.join(crop_dir, crop_name)
+            crop_paths.append(crop_path)
+        print(crop_paths)
 
-    # Background segmentation from filepaths
-    # with Pool(processes=num_cores) as pool:
-    #     prepped_mask = partial(path_back_mask, n_seeds=1500, s_th=0.25, v_th=0.2)
-    #     process_iter = pool.imap(func=prepped_mask, iterable=filepaths)
-    #     process_loop = tqdm(process_iter, total=len(filepaths))
+        # Background segmentation from filepaths of cropped images
+        with Pool(processes=num_cores) as pool:
+            prepped_mask = partial(
+                path_back_mask,
+                rm_alpha=False,
+                n_seeds=1500,
+                h_th=H_THRES,
+                s_th=S_THRES,
+                v_th=V_THRES,
+            )
+            process_iter = pool.imap(func=prepped_mask, iterable=crop_paths)
+            process_loop = tqdm(
+                process_iter, desc="Background removal", total=len(crop_paths)
+            )
 
-    #     # Iterate over completed masks
-    #     count = 0
-    #     for mask in process_loop:
-    #         cur_image_name = crop_names[count]
-    #         new_image_name = f"{os.path.splitext(cur_image_name)[0]}_mask.png"
+            # Iterate over completed masks
+            count = 0
+            for mask in process_loop:
+                cur_image_name = crop_names[count]
+                new_image_name = f"{os.path.splitext(cur_image_name)[0]}_mask.png"
 
-    #         # Update count
-    #         count += 1
+                # Update count
+                count += 1
 
-    #         # Save succesful masks and skip unreadable images
-    #         try:
-    #             # Save mask
-    #             utils.save_img(
-    #                 img=mask,
-    #                 target_dir=mask_dir,
-    #                 filename=new_image_name,
-    #             )
-    #             print(
-    #                 f"[INFO] Image {cur_image_name} was succesfully masked and saved to {new_image_name}!"
-    #             )
-    #         except:
-    #             print(f"[ISSUE] Image {cur_image_name} was unreadable and skipped")
+                # Save succesful masks and skip unreadable images
+                try:
+                    # Save mask
+                    utils.save_img(
+                        img=mask,
+                        target_dir=mask_dir,
+                        filename=new_image_name,
+                    )
+                except:
+                    print(f"[ISSUE] Image {cur_image_name} was unreadable and skipped")
 
 
 if __name__ == "__main__":
