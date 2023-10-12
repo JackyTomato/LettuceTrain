@@ -292,7 +292,6 @@ def main():
         for crop_name in crop_names:
             crop_path = os.path.join(crop_dir, crop_name)
             crop_paths.append(crop_path)
-        print(crop_paths)
 
         # Background segmentation from filepaths of cropped images
         with Pool(processes=num_cores) as pool:
