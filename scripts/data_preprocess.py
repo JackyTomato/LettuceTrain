@@ -3,6 +3,7 @@
 Preprocesses the raw imaging data for use in deep learning.
 
 TODO:
+    - Add listing of corrupt files
     - Add cropping of invidual plants, need  coords
     - Tweak background removal (seeds, HSV)
     - Make background removal only keep largest object when crop single plant
@@ -238,6 +239,7 @@ def main():
     CROP_POS = (2028, 1520)
     CROP_SHAPE = (2412, 2412)
     MASK = True
+    SEEDS = 1500
     H_THRES = 0
     S_THRES = 0.25
     V_THRES = 0.2
@@ -298,7 +300,7 @@ def main():
             prepped_mask = partial(
                 path_back_mask,
                 rm_alpha=False,
-                n_seeds=1500,
+                n_seeds=SEEDS,
                 h_th=H_THRES,
                 s_th=S_THRES,
                 v_th=V_THRES,
