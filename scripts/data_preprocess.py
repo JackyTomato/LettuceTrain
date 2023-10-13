@@ -3,7 +3,7 @@
 Preprocesses the raw imaging data for use in deep learning.
 
 TODO:
-    - Add listing of corrupt files
+    - Test listing of corrupt files
     - Add cropping of invidual plants, need  coords
     - Tweak background removal (seeds, HSV)
     - Make background removal only keep largest object when crop single plant
@@ -244,6 +244,9 @@ def main():
     S_THRES = 0.25
     V_THRES = 0.2
 
+    # Prepare to track corrupted images
+    corrupt = []
+
     # Crop original images
     if CROP:
         # Create filepaths of original images
@@ -284,6 +287,9 @@ def main():
                         filename=new_image_name,
                     )
                 except:
+                    # Add unreadable file to list of corrupted images
+                    corrupt.append(cur_image_name)
+
                     print(f"[ISSUE] Image {cur_image_name} was unreadable and skipped")
 
     # Background mask cropped images
@@ -328,7 +334,17 @@ def main():
                         filename=new_image_name,
                     )
                 except:
+                    # Add unreadable file to list of corrupted images
+                    corrupt.append(cur_image_name)
+
                     print(f"[ISSUE] Image {cur_image_name} was unreadable and skipped")
+
+    # Save list of corrupt images as text file
+    corrupt_path = os.path.join(data_dir, "corrupt_images.txt")
+    with open(corrupt_path, "w") as cor_file:
+        for cor_name in corrupt:
+            cor_file.write(cor_name)
+            cor_file.write("\n0")
 
 
 if __name__ == "__main__":
