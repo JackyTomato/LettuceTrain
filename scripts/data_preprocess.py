@@ -344,7 +344,7 @@ def main():
     with open(corrupt_path, "w") as cor_file:
         for cor_name in corrupt:
             cor_file.write(cor_name)
-            cor_file.write("\n0")
+            cor_file.write("\n")
 
 
 if __name__ == "__main__":
