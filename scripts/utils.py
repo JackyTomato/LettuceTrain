@@ -221,3 +221,27 @@ def save_img(img, target_dir, filename):
 
     else:
         raise Exception("Input image object should be np.ndarray or PIL.Image.Image")
+
+
+# Read Fluorcam's .fimg files
+def read_fimg(filename):
+    """Reads Fluorcam .fimg files as a np.ndarray with float32 values.
+
+    Float32 is used to normalize bit values to values from -1 to 1.
+
+    Args:
+        filename (str): Name of the .fimg file to be read.
+
+    Returns:
+        np.ndarray: Image as np.ndarray with height, width of 1024, 1360.
+    """
+    with open(filename) as fimg:
+        # Convert to np.array with float32 for normalized values
+        img = np.fromfile(fimg, np.dtype("float32"))
+
+        # Delete first two values (info about image dimensions)
+        img = img[2:]
+
+        # Reshape to intended dimensions
+        img = np.reshape(img, newshape=(1024, 1360))
+        return img
