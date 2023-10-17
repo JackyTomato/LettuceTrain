@@ -4,10 +4,8 @@ Preprocesses the raw imaging data for use in deep learning.
 
 TODO:
     - Test listing of corrupt files
-    - Add cropping of invidual plants, need  coords
-    - Tweak background removal (seeds, HSV)
+    - Add cropping of plants
     - Make background removal only keep largest object when crop single plant
-    - Figure out how to deal with tubes and shadows being included too
     - Figure out a way to deal with overlap (PlantCV, neural network?)
     - Add argparse functionality for config
 """
