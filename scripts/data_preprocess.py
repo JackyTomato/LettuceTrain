@@ -4,7 +4,8 @@ Preprocesses the raw imaging data for use in deep learning.
 
 TODO:
     - Test listing of corrupt files
-    - Add cropping of plants
+    - Add saving of cropped images with plant names
+    - Integrate cropping into path_crop for multi processing
     - Make background removal only keep largest object when crop single plant
     - Figure out a way to deal with overlap (PlantCV, neural network?)
     - Add argparse functionality for config
@@ -155,6 +156,226 @@ def water_hsv_thresh(rgb_im, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
     hsv_blurred = color.rgb2hsv(blurred)
     mask = multichannel_threshold(hsv_blurred, h_th, s_th, v_th)
     return mask.astype(int)
+
+
+def overlay_crop(rgb_img, fm_img, fvfm_img, crop_size, dist_plants, num_plants):
+    """Crops plants from RGB, Fm and FvFm images in such a way that the crops overlap.
+
+    Assumes that the only transformations still needed to make the crops overlap are
+    simply shifts along width and height. Thus, images should have been rescaled beforehand
+    to make sure plants are of same scale.
+
+    Assumes that distance between plants is same along width and height.
+
+    Shifts along width and height were taken from observations on several images
+    and have been hard-coded.
+
+    Args:
+        rgb_img (np.ndarray): RGB image as np.ndarray.
+        fm_img (np.ndarray): Fm image as np.ndarray.
+        fvfm_img (np.ndarray): Fv/Fm image as np.ndarray.
+        crop_size (tuple): Tuple of ints (width, height) with desired resolution of image crops.
+        dist_plants (int): Distance in px between plants along width and height.
+        num_plants (int): Number of plants in image, 4 or 5.
+
+    Returns:
+        list: Contains cropped RGB images as np.ndarrays.
+        list: Contains cropped Fm images as np.ndarrays.
+        list: Contains cropped Fv/Fm images as np.ndarrays.
+    """
+    # Calculate center coordinates of RGB
+    center_x = int(rgb_img.shape[1] / 2 + 0.5)
+    center_y = int(rgb_img.shape[0] / 2 + 0.5)
+
+    # Calculate offset between RGB and fluorescence images
+    offset_x = int((rgb_img.shape[1] - fm.shape[1]) / 2)
+    offset_y = int((rgb_img.shape[0] - fm.shape[0]) / 2)
+
+    # Crop for 4 plants
+    if num_plants == 4:
+        # Crop RGB
+        rgb_area1 = crop_region(
+            image=rgb_img,
+            centre=(center_x + 1, center_y - dist_plants + 15),
+            shape=crop_size,
+        )
+        rgb_area2 = crop_region(
+            image=rgb_img,
+            centre=(center_x - dist_plants + 2, center_y + 11),
+            shape=crop_size,
+        )
+        rgb_area3 = crop_region(
+            image=rgb_img,
+            centre=(center_x + dist_plants - 3, center_y + 14),
+            shape=crop_size,
+        )
+        rgb_area4 = crop_region(
+            image=rgb_img,
+            centre=(center_x - 1, center_y + dist_plants + 8),
+            shape=crop_size,
+        )
+
+        # Crop Fm
+        fm_area1 = crop_region(
+            image=fm_img,
+            centre=(center_x - offset_x, center_y - dist_plants - offset_y),
+            shape=crop_size,
+        )
+        fm_area2 = crop_region(
+            image=fm_img,
+            centre=(center_x - dist_plants - offset_x, center_y - offset_y),
+            shape=crop_size,
+        )
+        fm_area3 = crop_region(
+            image=fm_img,
+            centre=(center_x + dist_plants - offset_x, center_y - offset_y),
+            shape=crop_size,
+        )
+        fm_area4 = crop_region(
+            image=fm_img,
+            centre=(center_x - offset_x, center_y + dist_plants - offset_y),
+            shape=crop_size,
+        )
+
+        # Crop Fv/Fm
+        fvfm_area1 = crop_region(
+            image=fvfm_img,
+            centre=(center_x - offset_x, center_y - dist_plants - offset_y),
+            shape=crop_size,
+        )
+        fvfm_area2 = crop_region(
+            image=fvfm_img,
+            centre=(center_x - dist_plants - offset_x, center_y - offset_y),
+            shape=crop_size,
+        )
+        fvfm_area3 = crop_region(
+            image=fvfm_img,
+            centre=(center_x + dist_plants - offset_x, center_y - offset_y),
+            shape=crop_size,
+        )
+        fvfm_area4 = crop_region(
+            image=fvfm_img,
+            centre=(center_x - offset_x, center_y + dist_plants - offset_y),
+            shape=crop_size,
+        )
+
+        # Compile crops into lists
+        rgb_crops = [rgb_area1, rgb_area2, rgb_area3, rgb_area4]
+        fm_crops = [fm_area1, fm_area2, fm_area3, fm_area4]
+        fvfm_crops = [fvfm_area1, fvfm_area2, fvfm_area3, fvfm_area4]
+
+    # Crop for 5 plants
+    elif num_plants == 5:
+        # Crop RGB
+        rgb_area1 = crop_region(
+            image=rgb_img,
+            centre=(center_x - dist_plants + 3, center_y - dist_plants + 12),
+            shape=crop_size,
+        )
+        rgb_area2 = crop_region(
+            image=rgb_img,
+            centre=(center_x + dist_plants - 1, center_y - dist_plants + 14),
+            shape=crop_size,
+        )
+        rgb_area3 = crop_region(
+            image=rgb_img, centre=(center_x, center_y + 10), shape=crop_size
+        )
+        rgb_area4 = crop_region(
+            image=rgb_img,
+            centre=(center_x - dist_plants + 1, center_y + dist_plants + 6),
+            shape=crop_size,
+        )
+        rgb_area5 = crop_region(
+            image=rgb_img,
+            centre=(center_x + dist_plants - 4, center_y + dist_plants + 9),
+            shape=crop_size,
+        )
+
+        # Crop Fm
+        fm_area1 = crop_region(
+            image=fm_img,
+            centre=(
+                center_x - dist_plants - offset_x,
+                center_y - dist_plants - offset_y,
+            ),
+            shape=crop_size,
+        )
+        fm_area2 = crop_region(
+            image=fm_img,
+            centre=(
+                center_x + dist_plants - offset_x,
+                center_y - dist_plants - offset_y,
+            ),
+            shape=crop_size,
+        )
+        fm_area3 = crop_region(
+            image=fm_img,
+            centre=(center_x - offset_x, center_y - offset_y),
+            shape=crop_size,
+        )
+        fm_area4 = crop_region(
+            image=fm_img,
+            centre=(
+                center_x - dist_plants - offset_x,
+                center_y + dist_plants - offset_y,
+            ),
+            shape=crop_size,
+        )
+        fm_area5 = crop_region(
+            image=fm_img,
+            centre=(
+                center_x + dist_plants - offset_x,
+                center_y + dist_plants - offset_y,
+            ),
+            shape=crop_size,
+        )
+
+        # Crop Fv/Fm
+        fvfm_area1 = crop_region(
+            image=fvfm_img,
+            centre=(
+                center_x - dist_plants - offset_x,
+                center_y - dist_plants - offset_y,
+            ),
+            shape=crop_size,
+        )
+        fvfm_area2 = crop_region(
+            image=fvfm_img,
+            centre=(
+                center_x + dist_plants - offset_x,
+                center_y - dist_plants - offset_y,
+            ),
+            shape=crop_size,
+        )
+        fvfm_area3 = crop_region(
+            image=fvfm_img,
+            centre=(center_x - offset_x, center_y - offset_y),
+            shape=crop_size,
+        )
+        fvfm_area4 = crop_region(
+            image=fvfm_img,
+            centre=(
+                center_x - dist_plants - offset_x,
+                center_y + dist_plants - offset_y,
+            ),
+            shape=crop_size,
+        )
+        fvfm_area5 = crop_region(
+            image=fvfm_img,
+            centre=(
+                center_x + dist_plants - offset_x,
+                center_y + dist_plants - offset_y,
+            ),
+            shape=crop_size,
+        )
+
+        # Compile crops into lists
+        rgb_crops = [rgb_area1, rgb_area2, rgb_area3, rgb_area4, rgb_area5]
+        fm_crops = [fm_area1, fm_area2, fm_area3, fm_area4, fm_area5]
+        fvfm_crops = [fvfm_area1, fvfm_area2, fvfm_area3, fvfm_area4, fvfm_area5]
+
+    # Return lists of cropped images
+    return rgb_crops, fm_crops, fvfm_crops
 
 
 # Define end-to-end crop function for multi-processing
