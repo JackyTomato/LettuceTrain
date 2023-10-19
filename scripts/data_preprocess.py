@@ -3,7 +3,7 @@
 Preprocesses the raw imaging data for use in deep learning.
 
 TODO:
-    - Test listing of corrupt files
+    - Test listing of skipped files
     - Add saving of cropped images with plant names
     - Integrate cropping into path_crop for multi processing
     - Make background removal only keep largest object when crop single plant
@@ -15,7 +15,9 @@ TODO:
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import re
 from skimage import io, color, filters, segmentation, util, morphology
+from skimage.transform import rescale
 from multiprocessing.pool import Pool
 from tqdm import tqdm
 from functools import partial
@@ -158,6 +160,27 @@ def water_hsv_thresh(rgb_im, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
     return mask.astype(int)
 
 
+def read_tray(filepath):
+    """Parses the tray registraton tab-delimited file as a dictionary.
+
+    Args:
+        filepath (str): Filepath to the tray registration file.
+
+    Returns:
+        dict: Dictionary with structure:
+            {column1: np.ndarray([value1, value2, value3]),
+            column2: np.ndarray([value1, value2, value3])}
+    """
+    # Read tsv as an array containing arrays for every line
+    line_arrays = np.loadtxt(filepath, dtype=str, delimiter="\t", skiprows=1)
+
+    # Turn arrays into dict with column names as keys
+    keys = line_arrays[0]
+    vals = np.transpose(line_arrays[1:])
+    tray_dict = dict(zip(keys, vals))
+    return tray_dict
+
+
 def overlay_crop(rgb_img, fm_img, fvfm_img, crop_size, dist_plants, num_plants):
     """Crops plants from RGB, Fm and FvFm images in such a way that the crops overlap.
 
@@ -188,8 +211,8 @@ def overlay_crop(rgb_img, fm_img, fvfm_img, crop_size, dist_plants, num_plants):
     center_y = int(rgb_img.shape[0] / 2 + 0.5)
 
     # Calculate offset between RGB and fluorescence images
-    offset_x = int((rgb_img.shape[1] - fm.shape[1]) / 2)
-    offset_y = int((rgb_img.shape[0] - fm.shape[0]) / 2)
+    offset_x = int((rgb_img.shape[1] - fm_img.shape[1]) / 2)
+    offset_y = int((rgb_img.shape[0] - fm_img.shape[0]) / 2)
 
     # Crop for 4 plants
     if num_plants == 4:
@@ -379,40 +402,129 @@ def overlay_crop(rgb_img, fm_img, fvfm_img, crop_size, dist_plants, num_plants):
 
 
 # Define end-to-end crop function for multi-processing
-def path_crop(rgb_im_path, rm_alpha, centre, shape):
-    """Crops an image area of specified width and height around a central point from path
+def path_crop(
+    imgtype_paths,
+    scale_rgb,
+    tray_reg,
+    crop_shape,
+    crop_dist,
+    rm_alpha=True,
+    rgb_save_dir=None,
+    fm_save_dir=None,
+    fvfm_save_dir=None,
+):
+    """Crops plants from RGB, Fm and FvFm images from filepaths.
 
-    :param rgb_im_path: string, filepath to image
-    :param rm_alpha: bool, if True removes alpha channel of image
-    :param centre: tuple, contains the x and y coordinate of the centre as
-        integers
-    :param shape: tuple, contains the height and width of the subregion in
-        pixels as integers
-    :return: The cropped region of the original image
+    This function combines everything from filepath to cropping so
+    it can used for multi-processing or -threading.
+
+    Input filepaths should be a tuple of filepaths for RGB, Fm and Fv/Fm
+    images, in that specific order. If one of the image files can't be
+    read, the function returns None.
+
+    Cropping is done in such a way that the plants overlap by using
+    vertical and horizontal shifts.
+
+    Args:
+        imgtype_paths (tuple): Tuple of RGB, Fm and Fv/Fm filepaths as str.
+        scale_rgb (tuple): Tuple of floats to rescale each dimension of RGB image.
+        tray_reg (dict): Dictionary of information from the tray registration file.
+        crop_shape (tuple): Tuple of ints for shape of crop.
+        crop_dist (int): Vertical/horizontal distance between plants on tray.
+        rm_alpha (bool, optional): Removes alpha channel from RGB. Defaults to True.
+        rgb_save_dir (str, optional): Directory to save RGB crops. Defaults to None.
+        fm_save_dir (str, optional): Directory to save Fm crops. Defaults to None.
+        fvfm_save_dir (str, optional): Directory to save FvFm crops. Defaults to None.
+
+    Returns:
+        list: Contains cropped RGB images as np.ndarrays.
+        list: Contains cropped Fm images as np.ndarrays.
+        list: Contains cropped Fv/Fm images as np.ndarrays.
     """
-    # Read file, if can't read file, function returns nothing
+    # Read file, if can't read one of the files, function returns nothing
     try:
-        img = io.imread(rgb_im_path)
+        rgb = io.imread(imgtype_paths[0])
+        fm = utils.read_fimg(imgtype_paths[1])
+        fvfm = utils.read_fimg(imgtype_paths[2])
     except:
         return
-    if rm_alpha:
-        img = no_alpha(img)
 
-    # Crop region
-    shape_r = np.array(shape)
-    shape_r[shape_r % 2 == 1] += 1
-    if img.ndim == 2:
-        crop = img[
-            centre[1] - shape_r[1] // 2 : centre[1] + shape[1] // 2,
-            centre[0] - shape_r[0] // 2 : centre[0] + shape[0] // 2,
-        ]
-    else:
-        crop = img[
-            centre[1] - shape_r[1] // 2 : centre[1] + shape[1] // 2,
-            centre[0] - shape_r[0] // 2 : centre[0] + shape[0] // 2,
-            :,
-        ]
-    return crop
+    # Remove alpha from RGB image if desired and image has 4 channels
+    if rm_alpha and rgb.shape[2] == 4:
+        rgb = no_alpha(rgb)
+
+    # Rescale RGB image to allow overlaying with fluorescence images
+    re_rgb = rescale(image=rgb, scale=scale_rgb, anti_aliasing=True)
+
+    # Normalize Fm values to range from 0 to 1
+    fm = fm / np.max(fm)
+
+    # Convert RGB back to uint8 after rescaling and convert Fm and Fv/Fm to uint8
+    re_rgb = util.img_as_ubyte(re_rgb)
+    fm = util.img_as_ubyte(fm)
+    fvfm = util.img_as_ubyte(fvfm)
+
+    # Extract tray ID from RGB image filename
+    rgb_name = os.path.basename(imgtype_paths[0])
+    regex_trayID = re.compile(".+Tray_(\d{3})")
+    match_trayID = regex_trayID.match(rgb_name)
+    trayID = match_trayID.group(1)
+
+    # Determine if image file has 4 or 5 plants
+    all_trayIDs = tray_reg["TrayID"]
+    bool_ind_trayID = np.core.defchararray.find(all_trayIDs, trayID) != -1
+    ind_trayID = np.flatnonzero(bool_ind_trayID)
+    num_plants = len(ind_trayID)
+
+    # Crop RGB, Fm and FvFm crops in such a way that they overlap
+    rgb_crops, fm_crops, fvfm_crops = overlay_crop(
+        re_rgb,
+        fm,
+        fvfm,
+        crop_size=crop_shape,
+        dist_plants=crop_dist,
+        num_plants=num_plants,
+    )
+
+    # Save cropped images if desired, with plant names in filename
+    if any([rgb_save_dir, fm_save_dir, fvfm_save_dir]):
+        all_plantnames = tray_reg["PlantName"]
+        plantnames = all_plantnames[ind_trayID]
+
+    if rgb_save_dir is not None:
+        # Count to add correct area number and plantname
+        count = 0
+        for rgb_crop in rgb_crops:
+            old_name = os.path.basename(imgtype_paths[0])
+            new_name = (
+                f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.png"
+            )
+            count += 1
+            utils.save_img(rgb_crop, target_dir=rgb_save_dir, filename=new_name)
+
+    if fm_save_dir is not None:
+        # Count to add correct area number and plantname
+        count = 0
+        for fm_crop in fm_crops:
+            old_name = os.path.basename(imgtype_paths[0])
+            new_name = (
+                f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.png"
+            )
+            count += 1
+            utils.save_img(fm_crop, target_dir=fm_save_dir, filename=new_name)
+
+    if fvfm_save_dir is not None:
+        # Count to add correct area number and plantname
+        count = 0
+        for fvfm_crop in fvfm_crops:
+            old_name = os.path.basename(imgtype_paths[0])
+            new_name = (
+                f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.png"
+            )
+            count += 1
+            utils.save_img(fvfm_crop, target_dir=fvfm_save_dir, filename=new_name)
+
+    return rgb_crops, fm_crops, fvfm_crops
 
 
 # Define end-to-end background removal function for multi-processing
@@ -451,77 +563,97 @@ def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0)
 
 def main():
     # Set config
-    data_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/img/RGB"
-    crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/img/crops"
-    mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/img/masks"
+    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/RGB"
+    fm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/Fluor/Fm"
+    fvfm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/Fluor/Fv_Fm"
+    rgb_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/rgb_crops"
+    fm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/fm_crops"
+    fvfm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/fvfm_crops"
+    rgb_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/rgb_masks"
+    fm_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/fm_masks"
+    CORES = 20
+    RESCALE_RGB = (0.36, 0.36, 1)
     CROP = True
-    CROP_POS = (2028, 1520)
-    CROP_SHAPE = (2412, 2412)
-    MASK = True
+    CROP_DIST = 265
+    CROP_SHAPE = (484, 484)
+    MASK = False
     SEEDS = 1500
     H_THRES = 0
     S_THRES = 0.25
     V_THRES = 0.2
 
-    # Prepare to track corrupted images
-    corrupt = []
+    # Prepare to track skipped images
+    skipped = []
+
+    # Read tray registration for info on image files
+    tray_reg = read_tray(
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/Tray_registration_B8.tsv"
+    )
 
     # Crop original images
     if CROP:
-        # Create filepaths of original images
-        image_names = os.listdir(data_dir)
-        filepaths = []
-        for image_name in image_names:
-            filepath = os.path.join(data_dir, image_name)
-            filepaths.append(filepath)
+        # Retrieve and sort RGB, Fm and Fv/Fm filenames
+        rgb_names = sorted(os.listdir(rgb_dir))
+        fm_names = sorted(os.listdir(fm_dir))
+        fvfm_names = sorted(os.listdir(fvfm_dir))
 
-        # Multi-processed image processing
-        num_cores = 4
+        # Create lists of filepaths
+        rgb_filepaths = []
+        fm_filepaths = []
+        fvfm_filepaths = []
+        for filenames in zip(rgb_names, fm_names, fvfm_names):
+            # Join directory and filename to make filepath
+            rgb_filepath = os.path.join(rgb_dir, filenames[0])
+            fm_filepath = os.path.join(fm_dir, filenames[1])
+            fvfm_filepath = os.path.join(fvfm_dir, filenames[2])
 
-        # Cropping from filepaths of original images
-        with Pool(processes=num_cores) as pool:
+            # Append filepaths to lists of filepaths
+            rgb_filepaths.append(rgb_filepath)
+            fm_filepaths.append(fm_filepath)
+            fvfm_filepaths.append(fvfm_filepath)
+
+        # Cropping for overlay from filepaths of original images
+        with Pool(processes=CORES) as pool:
             prepped_crop = partial(
-                path_crop, rm_alpha=True, centre=CROP_POS, shape=CROP_SHAPE
+                path_crop,
+                scale_rgb=RESCALE_RGB,
+                tray_reg=tray_reg,
+                crop_shape=CROP_SHAPE,
+                crop_dist=CROP_DIST,
+                rgb_save_dir=rgb_crop_dir,
+                fm_save_dir=fm_crop_dir,
+                fvfm_save_dir=fvfm_crop_dir,
             )
-            process_iter = pool.imap(func=prepped_crop, iterable=filepaths)
+            process_iter = pool.imap(
+                func=prepped_crop,
+                iterable=zip(rgb_filepaths, fm_filepaths, fvfm_filepaths),
+            )
             process_loop = tqdm(
-                process_iter, desc="Image cropping", total=len(filepaths)
+                process_iter,
+                desc="RGB, Fm and Fv/Fm cropping",
+                total=len(rgb_filepaths),
             )
 
-            # Iterate over completed masks
+            # Execute processes in order and collect skipped files
             count = 0
-            for crop in process_loop:
-                cur_image_name = image_names[count]
-                new_image_name = f"{os.path.splitext(cur_image_name)[0]}_crop.png"
-
-                # Update count
-                count += 1
-
-                # Save succesful masks and skip unreadable images
-                try:
-                    # Save mask
-                    utils.save_img(
-                        img=crop,
-                        target_dir=crop_dir,
-                        filename=new_image_name,
-                    )
-                except:
-                    # Add unreadable file to list of corrupted images
-                    corrupt.append(cur_image_name)
-
-                    print(f"[ISSUE] Image {cur_image_name} was unreadable and skipped")
+            for crops in process_loop:  # processes are executed during loop
+                # Track which files were skipped
+                if crops is None:
+                    skipped.append(rgb_names[0])
+                    skipped.append(fm_names[0])
+                    skipped.append(fvfm_names[0])
 
     # Background mask cropped images
     if MASK:
         # Create filepaths of cropped images
-        crop_names = os.listdir(crop_dir)
+        crop_names = os.listdir(rgb_crop_dir)
         crop_paths = []
         for crop_name in crop_names:
-            crop_path = os.path.join(crop_dir, crop_name)
+            crop_path = os.path.join(rgb_crop_dir, crop_name)
             crop_paths.append(crop_path)
 
         # Background segmentation from filepaths of cropped images
-        with Pool(processes=num_cores) as pool:
+        with Pool(processes=CORES) as pool:
             prepped_mask = partial(
                 path_back_mask,
                 rm_alpha=False,
@@ -549,21 +681,21 @@ def main():
                     # Save mask
                     utils.save_img(
                         img=mask,
-                        target_dir=mask_dir,
+                        target_dir=rgb_mask_dir,
                         filename=new_image_name,
                     )
                 except:
-                    # Add unreadable file to list of corrupted images
-                    corrupt.append(cur_image_name)
+                    # Add unreadable file to list of skipped images
+                    skipped.append(cur_image_name)
 
                     print(f"[ISSUE] Image {cur_image_name} was unreadable and skipped")
 
-    # Save list of corrupt images as text file
-    corrupt_path = os.path.join(data_dir, "corrupt_images.txt")
-    with open(corrupt_path, "w") as cor_file:
-        for cor_name in corrupt:
-            cor_file.write(cor_name)
-            cor_file.write("\n")
+    # Save list of skipped images as text file in working directory
+    skipped_path = os.path.join(os.getcwd(), "skipped_images.txt")
+    with open(skipped_path, "w") as skip_file:
+        for skip_name in skipped:
+            skip_file.write(skip_name)
+            skip_file.write("\n")
 
 
 if __name__ == "__main__":
