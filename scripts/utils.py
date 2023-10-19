@@ -244,4 +244,7 @@ def read_fimg(filepath):
 
         # Reshape to intended dimensions
         img = np.reshape(img, newshape=(1024, 1360))
+
+        # Remove negative artifacts in Fv/Fm
+        img[img < 0] = 0
         return img
