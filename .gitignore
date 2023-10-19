@@ -4,3 +4,5 @@ output/*
 graveyard.py
 scripts/config.json
 scripts/first_nohup.txt
+scripts/nohup.out
+scripts/skipped_images.txt
