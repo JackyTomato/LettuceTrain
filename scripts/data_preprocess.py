@@ -5,7 +5,7 @@ Preprocesses the raw imaging data for use in deep learning.
 TODO:
     - Test listing of skipped files
     - Add saving of cropped images with plant names
-    - Integrate cropping into path_crop for multi processing
+    - Integrate cropping into path_overlay_crop for multi processing
     - Make background removal only keep largest object when crop single plant
     - Figure out a way to deal with overlap (PlantCV, neural network?)
     - Add argparse functionality for config
@@ -179,6 +179,99 @@ def read_tray(filepath):
     vals = np.transpose(line_arrays[1:])
     tray_dict = dict(zip(keys, vals))
     return tray_dict
+
+
+def indiv_crop(rgb_img, crop_size, dist_plants, num_plants):
+    """Crop individual plants from the RGB images.
+
+    Assumes that distance between plants is same along width and height.
+
+    Args:
+        rgb_img (np.ndarray): RGB image as np.ndarray.
+        crop_size (tuple): Tuple of ints (width, height) with desired resolution of image crops.
+        dist_plants (int): Distance in px between plants along width and height.
+        num_plants (int): Number of plants in image, 4 or 5.
+
+    Returns:
+        list: Contains cropped RGB images as np.ndarrays.
+    """
+    # Calculate center coordinates of RGB
+    center_x = int(rgb_img.shape[1] / 2 + 0.5)
+    center_y = int(rgb_img.shape[0] / 2 + 0.5)
+
+    # Crop for 4 plants
+    if num_plants == 4:
+        # Crop RGB
+        rgb_area1 = crop_region(
+            image=rgb_img,
+            centre=(center_x, center_y - dist_plants),
+            shape=crop_size,
+        )
+        rgb_area2 = crop_region(
+            image=rgb_img,
+            centre=(center_x - dist_plants, center_y),
+            shape=crop_size,
+        )
+        rgb_area3 = crop_region(
+            image=rgb_img,
+            centre=(center_x + dist_plants, center_y),
+            shape=crop_size,
+        )
+        rgb_area4 = crop_region(
+            image=rgb_img,
+            centre=(center_x, center_y + dist_plants),
+            shape=crop_size,
+        )
+
+        # Compile crops into lists
+        rgb_crops = [rgb_area1, rgb_area2, rgb_area3, rgb_area4]
+
+    # Crop for 5 plants
+    elif num_plants == 5:
+        # Crop RGB
+        rgb_area1 = crop_region(
+            image=rgb_img,
+            centre=(
+                center_x - dist_plants,
+                center_y - dist_plants,
+            ),
+            shape=crop_size,
+        )
+        rgb_area2 = crop_region(
+            image=rgb_img,
+            centre=(
+                center_x + dist_plants,
+                center_y - dist_plants,
+            ),
+            shape=crop_size,
+        )
+        rgb_area3 = crop_region(
+            image=rgb_img,
+            centre=(center_x, center_y),
+            shape=crop_size,
+        )
+        rgb_area4 = crop_region(
+            image=rgb_img,
+            centre=(
+                center_x - dist_plants,
+                center_y + dist_plants,
+            ),
+            shape=crop_size,
+        )
+        rgb_area5 = crop_region(
+            image=rgb_img,
+            centre=(
+                center_x + dist_plants,
+                center_y + dist_plants,
+            ),
+            shape=crop_size,
+        )
+
+        # Compile crops into lists
+        rgb_crops = [rgb_area1, rgb_area2, rgb_area3, rgb_area4, rgb_area5]
+
+    # Return lists of cropped images
+    return rgb_crops
 
 
 def overlay_crop(rgb_img, fm_img, fvfm_img, crop_size, dist_plants, num_plants):
@@ -401,8 +494,81 @@ def overlay_crop(rgb_img, fm_img, fvfm_img, crop_size, dist_plants, num_plants):
     return rgb_crops, fm_crops, fvfm_crops
 
 
-# Define end-to-end crop function for multi-processing
+# Define end-to-end overlay crop function for multi-processing
 def path_crop(
+    rgb_path,
+    tray_reg,
+    crop_shape,
+    crop_dist,
+    rm_alpha=True,
+    rgb_save_dir=None,
+):
+    """Crops individual plants from RGB image from filepath.
+
+    This function combines everything from filepath to cropping so
+    it can used for multi-processing or -threading.
+
+    If one of the image files can't be read, the function returns None.
+
+    Args:
+        rgb_path (str): Filepath to RGB image.
+        tray_reg (dict): Dictionary of information from the tray registration file.
+        crop_shape (tuple): Tuple of ints for shape of crop.
+        crop_dist (int): Vertical/horizontal distance between plants on tray.
+        rm_alpha (bool, optional): Removes alpha channel from RGB. Defaults to True.
+        rgb_save_dir (str, optional): Directory to save RGB crops. Defaults to None.
+
+    Returns:
+        list: Contains cropped RGB images as np.ndarrays.
+    """
+    # Read file, if can't read one of the files, function returns nothing
+    try:
+        rgb = io.imread(rgb_path)
+    except:
+        return
+
+    # Remove alpha from RGB image if desired and image has 4 channels
+    if rm_alpha and rgb.shape[2] == 4:
+        rgb = no_alpha(rgb)
+
+    # Extract tray ID from RGB image filename
+    rgb_name = os.path.basename(rgb_path)
+    regex_trayID = re.compile(".+Tray_(\d{3})")
+    match_trayID = regex_trayID.match(rgb_name)
+    trayID = match_trayID.group(1)
+
+    # Determine if image file has 4 or 5 plants
+    all_trayIDs = tray_reg["TrayID"]
+    bool_ind_trayID = np.core.defchararray.find(all_trayIDs, trayID) != -1
+    ind_trayID = np.flatnonzero(bool_ind_trayID)
+    num_plants = len(ind_trayID)
+
+    # Crop RGB, Fm and FvFm crops in such a way that they overlap
+    rgb_crops = indiv_crop(
+        rgb, crop_size=crop_shape, dist_plants=crop_dist, num_plants=num_plants
+    )
+
+    # Save cropped images if desired, with plant names in filename
+    if rgb_save_dir is not None:
+        # Extract plant names
+        all_plantnames = tray_reg["PlantName"]
+        plantnames = all_plantnames[ind_trayID]
+
+        # Count to add correct area number and plantname
+        count = 0
+        for rgb_crop in rgb_crops:
+            old_name = os.path.basename(rgb_path)
+            new_name = (
+                f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.png"
+            )
+            count += 1
+            utils.save_img(rgb_crop, target_dir=rgb_save_dir, filename=new_name)
+
+    return rgb_crops
+
+
+# Define end-to-end overlay crop function for multi-processing
+def path_overlay_crop(
     imgtype_paths,
     scale_rgb,
     tray_reg,
@@ -572,10 +738,11 @@ def main():
     rgb_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/rgb_masks"
     fm_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/fm_masks"
     CORES = 20
-    RESCALE_RGB = (0.36, 0.36, 1)
     CROP = True
+    OVERLAY_IMG = False
+    RESCALE_RGB = (0.36, 0.36, 1)
     CROP_DIST = 265
-    CROP_SHAPE = (484, 484)
+    CROP_SHAPE = (1560, 1560)
     MASK = False
     SEEDS = 1500
     H_THRES = 0
@@ -592,56 +759,98 @@ def main():
 
     # Crop original images
     if CROP:
-        # Retrieve and sort RGB, Fm and Fv/Fm filenames
-        rgb_names = sorted(os.listdir(rgb_dir))
-        fm_names = sorted(os.listdir(fm_dir))
-        fvfm_names = sorted(os.listdir(fvfm_dir))
+        # Crop for overlay of RGB, Fm and Fv/Fm if desired
+        if OVERLAY_IMG:
+            # Retrieve and sort RGB, Fm and Fv/Fm filenames
+            rgb_names = sorted(os.listdir(rgb_dir))
+            fm_names = sorted(os.listdir(fm_dir))
+            fvfm_names = sorted(os.listdir(fvfm_dir))
 
-        # Create lists of filepaths
-        rgb_filepaths = []
-        fm_filepaths = []
-        fvfm_filepaths = []
-        for filenames in zip(rgb_names, fm_names, fvfm_names):
-            # Join directory and filename to make filepath
-            rgb_filepath = os.path.join(rgb_dir, filenames[0])
-            fm_filepath = os.path.join(fm_dir, filenames[1])
-            fvfm_filepath = os.path.join(fvfm_dir, filenames[2])
+            # Create lists of filepaths
+            rgb_filepaths = []
+            fm_filepaths = []
+            fvfm_filepaths = []
+            for filenames in zip(rgb_names, fm_names, fvfm_names):
+                # Join directory and filename to make filepath
+                rgb_filepath = os.path.join(rgb_dir, filenames[0])
+                fm_filepath = os.path.join(fm_dir, filenames[1])
+                fvfm_filepath = os.path.join(fvfm_dir, filenames[2])
 
-            # Append filepaths to lists of filepaths
-            rgb_filepaths.append(rgb_filepath)
-            fm_filepaths.append(fm_filepath)
-            fvfm_filepaths.append(fvfm_filepath)
+                # Append filepaths to lists of filepaths
+                rgb_filepaths.append(rgb_filepath)
+                fm_filepaths.append(fm_filepath)
+                fvfm_filepaths.append(fvfm_filepath)
 
-        # Cropping for overlay from filepaths of original images
-        with Pool(processes=CORES) as pool:
-            prepped_crop = partial(
-                path_crop,
-                scale_rgb=RESCALE_RGB,
-                tray_reg=tray_reg,
-                crop_shape=CROP_SHAPE,
-                crop_dist=CROP_DIST,
-                rgb_save_dir=rgb_crop_dir,
-                fm_save_dir=fm_crop_dir,
-                fvfm_save_dir=fvfm_crop_dir,
-            )
-            process_iter = pool.imap(
-                func=prepped_crop,
-                iterable=zip(rgb_filepaths, fm_filepaths, fvfm_filepaths),
-            )
-            process_loop = tqdm(
-                process_iter,
-                desc="RGB, Fm and Fv/Fm cropping",
-                total=len(rgb_filepaths),
-            )
+            # Cropping for overlay from filepaths of original images
+            with Pool(processes=CORES) as pool:
+                prepped_crop = partial(
+                    path_overlay_crop,
+                    scale_rgb=RESCALE_RGB,
+                    tray_reg=tray_reg,
+                    crop_shape=CROP_SHAPE,
+                    crop_dist=CROP_DIST,
+                    rgb_save_dir=rgb_crop_dir,
+                    fm_save_dir=fm_crop_dir,
+                    fvfm_save_dir=fvfm_crop_dir,
+                )
+                process_iter = pool.imap(
+                    func=prepped_crop,
+                    iterable=zip(rgb_filepaths, fm_filepaths, fvfm_filepaths),
+                )
+                process_loop = tqdm(
+                    process_iter,
+                    desc="RGB, Fm and Fv/Fm cropping",
+                    total=len(rgb_filepaths),
+                )
 
-            # Execute processes in order and collect skipped files
-            count = 0
-            for crops in process_loop:  # processes are executed during loop
-                # Track which files were skipped
-                if crops is None:
-                    skipped.append(rgb_names[0])
-                    skipped.append(fm_names[0])
-                    skipped.append(fvfm_names[0])
+                # Execute processes in order and collect skipped files
+                count = 0
+                for crops in process_loop:  # processes are executed during loop
+                    # Track which files were skipped
+                    if crops is None:
+                        skipped.append(rgb_names[0])
+                        skipped.append(fm_names[0])
+                        skipped.append(fvfm_names[0])
+
+        # Only crop RGB images without downscaling for overlay
+        else:
+            # Retrieve and sort RGB filenames
+            rgb_names = sorted(os.listdir(rgb_dir))
+
+            # Create list of filepaths
+            rgb_filepaths = []
+            for rgb_name in rgb_names:
+                # Join directory and filename to make filepath
+                rgb_filepath = os.path.join(rgb_dir, rgb_name)
+
+                # Append filepaths to lists of filepaths
+                rgb_filepaths.append(rgb_filepath)
+
+            # Cropping for overlay from filepaths of original images
+            with Pool(processes=CORES) as pool:
+                prepped_crop = partial(
+                    path_crop,
+                    tray_reg=tray_reg,
+                    crop_shape=CROP_SHAPE,
+                    crop_dist=CROP_DIST,
+                    rgb_save_dir=rgb_crop_dir,
+                )
+                process_iter = pool.imap(
+                    func=prepped_crop,
+                    iterable=rgb_filepaths,
+                )
+                process_loop = tqdm(
+                    process_iter,
+                    desc="RGB cropping",
+                    total=len(rgb_filepaths),
+                )
+
+                # Execute processes in order and collect skipped files
+                count = 0
+                for crops in process_loop:  # processes are executed during loop
+                    # Track which files were skipped
+                    if crops is None:
+                        skipped.append(rgb_names[0])
 
     # Background mask cropped images
     if MASK:
