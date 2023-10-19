@@ -741,7 +741,7 @@ def main():
     CROP = True
     OVERLAY_IMG = False
     RESCALE_RGB = (0.36, 0.36, 1)
-    CROP_DIST = 265
+    CROP_DIST = 736
     CROP_SHAPE = (1560, 1560)
     MASK = False
     SEEDS = 1500
