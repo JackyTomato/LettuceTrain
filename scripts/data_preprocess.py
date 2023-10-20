@@ -3,9 +3,8 @@
 Preprocesses the raw imaging data for use in deep learning.
 
 TODO:
+    - Implement Chris masking with multi-processing (only largest object, same param, etc.)
     - Test listing of skipped files
-    - Add saving of cropped images with plant names
-    - Integrate cropping into path_overlay_crop for multi processing
     - Make background removal only keep largest object when crop single plant
     - Figure out a way to deal with overlap (PlantCV, neural network?)
     - Add argparse functionality for config
@@ -16,7 +15,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import re
-from skimage import io, color, filters, segmentation, util, morphology
+from skimage import io, color, filters, segmentation, util, morphology, measure
 from skimage.transform import rescale
 from multiprocessing.pool import Pool
 from tqdm import tqdm
@@ -42,7 +41,7 @@ def no_alpha(rgb_im):
     alphaless = color.rgba2rgb(rgb_im)
 
     # Convert values from float64 back to uint8
-    alphaless = (alphaless * 255).astype(np.uint8)
+    alphaless = util.img_as_ubyte(alphaless)
     return alphaless
 
 
@@ -160,6 +159,42 @@ def water_hsv_thresh(rgb_im, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
     return mask.astype(int)
 
 
+# Define function to only keep object in center of binary mask
+def center_object(mask, center_scale=0.1):
+    """Returns mask with only the object at the center of a binary mask.
+
+    Uses a center area which is the size of the mask times argument center_scale.
+
+    Args:
+        mask (np.ndarray): Binary mask.
+        center_scale (float): Scale of center area of mask dimensions. Defaults to 0.1.
+
+    Returns:
+        np.ndarray: Binary mask containing only the object touching the center area.
+    """
+    # Label connections regions to distinguish different objects
+    labels = measure.label(mask)
+
+    # Define center area
+    center = np.array(mask.shape) // 2
+    center_area = np.zeros_like(mask)
+    offset_x = int(mask.shape[0] * center_scale)
+    offset_y = int(mask.shape[1] * center_scale)
+    center_area[
+        center[0] - offset_x : center[0] + offset_x,
+        center[1] - offset_y : center[1] + offset_y,
+    ] = 1
+
+    # Find the labels of objects that touch the center area
+    label_on_center = np.unique(labels[center_area == 1])
+    label_on_center = label_on_center[label_on_center > 0]  # don't include background
+
+    # Create a mask for the objects that touch the center area
+    center_object_mask = np.isin(labels, label_on_center)
+    return center_object_mask
+
+
+# Define parser for tray registration file for info on trays and plants
 def read_tray(filepath):
     """Parses the tray registraton tab-delimited file as a dictionary.
 
@@ -181,6 +216,7 @@ def read_tray(filepath):
     return tray_dict
 
 
+# Define crop functions
 def indiv_crop(rgb_img, crop_size, dist_plants, num_plants):
     """Crop individual plants from the RGB images.
 
@@ -695,7 +731,7 @@ def path_overlay_crop(
 
 # Define end-to-end background removal function for multi-processing
 def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0):
-    """Masks background of image from the corresponding path
+    """Masks background of image from the corresponding path.
 
     Uses hsv thresholds after watershed averaging for background segmentation.
     This function compiles all necessary tasks from image path to mask in order
@@ -721,9 +757,18 @@ def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0)
     if rm_alpha:
         img = no_alpha(img)
 
-    # Make background mask
+    # Mask out the background from the plants
     back_mask = water_hsv_thresh(img, n_seeds, h_th, s_th, v_th)
+
+    # Remove small noise and fill small holes
     back_mask = morphology.binary_opening(back_mask)
+    back_mask = morphology.remove_small_objects(back_mask)
+    hole_threshold = np.prod(np.array(back_mask.shape[:2])) ** 0.5 * 0.05
+    back_mask = morphology.remove_small_holes(back_mask, area_threshold=hole_threshold)
+
+    # Only keep the plant at the center of the image
+    back_mask = center_object(back_mask)
+
     return back_mask
 
 
