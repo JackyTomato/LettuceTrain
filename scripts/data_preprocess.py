@@ -526,6 +526,10 @@ def overlay_crop(rgb_img, fm_img, fvfm_img, crop_size, dist_plants, num_plants):
         fm_crops = [fm_area1, fm_area2, fm_area3, fm_area4, fm_area5]
         fvfm_crops = [fvfm_area1, fvfm_area2, fvfm_area3, fvfm_area4, fvfm_area5]
 
+    else:
+        print(num_plants)
+        raise ("num_plants should be 4 or 5")
+
     # Return lists of cropped images
     return rgb_crops, fm_crops, fvfm_crops
 
@@ -569,7 +573,7 @@ def path_crop(
 
     # Extract tray ID from RGB image filename
     rgb_name = os.path.basename(rgb_path)
-    regex_trayID = re.compile(".+Tray_(\d{3})")
+    regex_trayID = re.compile(".+Tray_(\d{2,})")
     match_trayID = regex_trayID.match(rgb_name)
     trayID = match_trayID.group(1)
 
@@ -668,14 +672,15 @@ def path_overlay_crop(
 
     # Extract tray ID from RGB image filename
     rgb_name = os.path.basename(imgtype_paths[0])
-    regex_trayID = re.compile(".+Tray_(\d{3})")
+    regex_trayID = re.compile(".+Tray_(\d{2,})")
     match_trayID = regex_trayID.match(rgb_name)
-    trayID = match_trayID.group(1)
+    trayID = int(match_trayID.group(1))
 
     # Determine if image file has 4 or 5 plants
     all_trayIDs = tray_reg["TrayID"]
-    bool_ind_trayID = np.core.defchararray.find(all_trayIDs, trayID) != -1
-    ind_trayID = np.flatnonzero(bool_ind_trayID)
+    all_trayIDs = [all_trayID.split("_")[-1] for all_trayID in all_trayIDs]
+    all_trayIDs = np.array(all_trayIDs, dtype=int)
+    ind_trayID = np.where(all_trayIDs == trayID)[0]
     num_plants = len(ind_trayID)
 
     # Crop RGB, Fm and FvFm crops in such a way that they overlap
@@ -774,20 +779,24 @@ def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0)
 
 def main():
     # Set config
-    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/RGB"
-    fm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/Fluor/Fm"
-    fvfm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/Fluor/Fv_Fm"
-    rgb_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/rgb_crops"
-    fm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/fm_crops"
-    fvfm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/fvfm_crops"
-    rgb_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/rgb_masks"
-    fm_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/mini/fm_masks"
+    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/RGB"
+    fm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/Fm"
+    fvfm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/FvFm"
+    rgb_crop_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_whole_crops"
+    )
+    fm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/fm_whole_crops"
+    fvfm_crop_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/fvfm_whole_crops"
+    )
+    rgb_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_masks"
+    fm_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/fm_masks"
     CORES = 20
     CROP = True
-    OVERLAY_IMG = False
+    OVERLAY_IMG = True
     RESCALE_RGB = (0.36, 0.36, 1)
-    CROP_DIST = 736
-    CROP_SHAPE = (1560, 1560)
+    CROP_DIST = 265  # no overlay: 736
+    CROP_SHAPE = (484, 484)  # no overlay: (1560, 1560)
     MASK = False
     SEEDS = 1500
     H_THRES = 0
