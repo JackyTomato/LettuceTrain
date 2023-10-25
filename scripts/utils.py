@@ -6,6 +6,7 @@ TODO:
     - Add segmentation performance functions (if we cant just use PyTorch's)
     - Use os.path.splitext to clean up save filenames
     - Add functions for plotting (plot data augs, plot predictions)
+    - Convert polygons to pixel masks
 """
 # Import functions
 import os
