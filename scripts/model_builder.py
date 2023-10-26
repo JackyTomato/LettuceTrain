@@ -3,16 +3,89 @@
 Functionality for building models as nn.Module class.
 
 TODO:
-    - Add TipburnSegmenter
+    - Provide torchvision support in Segmenter
+    - Implement dict with **args instead of multiple if else statements
     - Think about what backbones to use for semantic segmentation
 """
 # Import statements
 import torch
 import torch.nn as nn
 import torchvision
+import segmentation_models_pytorch as smp
+import re
 
 
 # Define nn.Module class for model
+class Segmenter(nn.Module):
+    def __init__(
+        self,
+        model_name,
+        encoder_name,
+        encoder_weights,
+        n_channels,
+        n_classes,
+        decoder_attention,
+        encoder_freeze,
+    ):
+        """Creates a semantic segmentation model as PyTorch nn.Module class.
+
+        Creates a segmentation model with an encoder. Encoder can be pretrained and frozen.
+        Names of networks and weights should follow the Segmentation Models Pytorch (smp) API:
+            https://github.com/qubvel/segmentation_models.pytorch
+        Or the torchvision API:
+            https://pytorch.org/vision/stable/models.html#listing-and-retrieving-available-models
+        Only supports the following torchvision models:
+            -
+
+        Args:
+            model_name (str): Name of segmentation model as in smp or torchvision.models.
+            encoder_name (str): Name of encoder for segmentation mdoel as in smp.
+            encoder_weights (str): Weights for encoder pretraining as in smp. Usually "imagenet".
+            n_channels (int): Number of input channels.
+            n_classes (int): Number of output classes for segmentation.
+            decoder_attention (str): Attention type for decoder. Available for Unet: None or "scse".
+            encoder_freeze (bool): If true, freezes parameters of the encoder.
+        """
+        super(Segmenter, self).__init__()
+
+        # Set backbone, allow for different models and pretraining
+        # Use backbone from segmentation models pytorch (smp)
+        if not model_name.startswith(("deeplab", "fcn", "lraspp")):
+            # Format all inputs for eval
+            model_call = f"smp.{model_name}"
+            enc_call = f'encoder_name="{encoder_name}"'
+            weights_call = f'encoder_weights="{encoder_weights}"'
+            channel_call = f"in_channels={n_channels}"
+            class_call = f"classes={n_classes}"
+            dec_att_call = f'decoder_attention_type="{decoder_attention}"'
+
+            # Join all arguments and replace all "None" with None
+            if decoder_attention is not None:
+                args_call = ", ".join(
+                    [enc_call, channel_call, class_call, weights_call, dec_att_call]
+                )
+            else:
+                args_call = ", ".join(enc_call, class_call, channel_call, weights_call)
+            args_call = re.sub(r'"None"', "None", args_call)
+
+            # Construct function call for eval and create model
+            model_call = f"{model_call}({args_call})"
+            print(model_call)
+            self.model = eval(model_call)
+
+            # Freeze weights in encoder if desired
+            for param in self.model.encoder.parameters():
+                param.requires_grad = not encoder_freeze
+
+        # Use backbone from torchvision
+        else:
+            pass
+
+    def forward(self, x):
+        pred_logits = self.model(x)
+        return pred_logits
+
+
 class TipburnClassifier(nn.Module):
     def __init__(
         self,
