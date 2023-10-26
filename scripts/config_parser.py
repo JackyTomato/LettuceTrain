@@ -46,6 +46,11 @@ _config_dict = parse_json("config.json")
 # Seed
 SEED = _config_dict["SEED"]
 
+# Setup device settings
+DEVICE = _config_dict["DEVICE"]
+NUM_WORKERS = _config_dict["NUM_WORKERS"]
+PIN_MEMORY = eval(_config_dict["PIN_MEMORY"])
+
 # Setup hyperparameters and other training specifics
 LEARNING_RATE = _config_dict["LEARNING_RATE"]
 NUM_EPOCHS = _config_dict["NUM_EPOCHS"]
@@ -53,11 +58,6 @@ OPTIMIZER = eval(_config_dict["OPTIMIZER"])
 SCALER = eval(_config_dict["SCALER"])
 LOSS_FN = eval(_config_dict["LOSS_FN"])
 PERFORMANCE_FN = eval(_config_dict["PERFORMANCE_FN"])
-
-# Setup device settings
-DEVICE = _config_dict["DEVICE"]
-NUM_WORKERS = _config_dict["NUM_WORKERS"]
-PIN_MEMORY = eval(_config_dict["PIN_MEMORY"])
 
 # Setup data loading settings
 DATASET = eval(_config_dict["DATA_CLASS"])

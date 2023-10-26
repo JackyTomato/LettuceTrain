@@ -50,7 +50,8 @@ Example of config.json with brief explanations as comments:
     "LOAD_MODEL_PATH": "output/model1/test_model1.pth.tar" # str, filepath of saved model to load
 }
 
-TODO:)
+TODO:
+    - Update config info
     - Allow user to specify config locations from terminal with arg
     - Make torchvision summary extract input image size from data
     - Create support for more than just classifiers (separate scripts?)
