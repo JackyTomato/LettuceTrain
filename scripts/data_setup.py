@@ -26,6 +26,10 @@ class LettuceSegDataset(Dataset):
     ):
         """Creates a PyTorch Dataset class of the lettuce segmantation dataset.
 
+        Uses sorted() to match filenames of images and masks. Check if filenames
+        are constructed in such a way that sorted() will sort the filenames in the same way.
+        Otherwise images and masks will be mismatched when loading the data.
+
         Args:
             img_dir (str): Filepath of directory containing the images.
             mask_dir (str): Filepath of directory  containing the segmentation masks.
@@ -36,20 +40,18 @@ class LettuceSegDataset(Dataset):
         """
         self.transform = transform
 
-        # List all image filenames
-        image_names = os.listdir(img_dir)
+        # List all image and mask filenames
+        img_names = sorted(os.listdir(img_dir))
+        mask_names = sorted(os.listdir(mask_dir))
 
-        # Obtain matching lists of image and mask filepaths
+        # Create lists of filepath for images and masks
         img_paths = []
         mask_paths = []
-        for image_name in image_names:
-            # Obtain matching image and mask filepath
-            img_path = os.path.join(img_dir, image_name)
-            mask_path = os.path.join(mask_dir, image_name.replace(".png", "_mask.png"))
-
-            # Append filepaths
+        for img_name, mask_name in zip(img_names, mask_names):
+            img_path = os.path.join(img_dir, img_name)
+            mask_path = os.path.join(mask_dir, mask_name)
             img_paths.append(img_path)
-            mask_path.append(mask_path)
+            mask_paths.append(mask_path)
 
         # Split train and test sets
         img_train, img_test, mask_train, mask_test = train_test_split(
@@ -70,9 +72,14 @@ class LettuceSegDataset(Dataset):
     def __getitem__(self, index):
         # Retrieve image and mask, should be np.array for albumentations.transforms
         img = np.array(Image.open(self.img_paths[index]))
-        mask = utils.binary
-        mask = np.array(Image.open(self.mask_path[index]))
+        if self.mask_paths[index].endswith(".json"):
+            mask = utils.binary_poly2px(self.mask_paths[index]).astype(np.float32)
+        else:
+            mask = np.array(Image.open(self.mask_paths[index]), dtype=np.float32)
+        if 255.0 in mask:
+            mask[mask == 255.0] = 1.0
 
+        # Apply data augmentation transforms to image and mask
         if self.transform is not None:
             augmentations = self.transform(image=img, mask=mask)
             img = augmentations["image"]
