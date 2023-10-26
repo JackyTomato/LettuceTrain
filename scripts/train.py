@@ -188,7 +188,7 @@ def main():
             model_name=cp.SAVE_MODEL_NAME,
         )
     elif (
-        cp.cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
+        cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
     ):  # Don't save when final epoch was checkpoint
         final_state = {
             "state_dict": model.state_dict(),
