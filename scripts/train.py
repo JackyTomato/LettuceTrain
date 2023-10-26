@@ -157,7 +157,7 @@ def main():
                 utils.save_checkpoint(
                     state=checkpoint,
                     target_dir=cp.SAVE_MODEL_DIR,
-                    model_name=cp.SAVE_MODEL_NAME.split(os.extsep)[0],
+                    model_name=cp.SAVE_MODEL_NAME,
                 )
 
         # Print out epoch number, loss and performance for this epoch
@@ -185,7 +185,7 @@ def main():
         utils.save_checkpoint(
             state=final_state,
             target_dir=cp.SAVE_MODEL_DIR,
-            model_name=cp.SAVE_MODEL_NAME.split(os.extsep)[0],
+            model_name=cp.SAVE_MODEL_NAME,
         )
     elif (
         cp.cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
@@ -197,7 +197,7 @@ def main():
         utils.save_checkpoint(
             state=final_state,
             target_dir=cp.SAVE_MODEL_DIR,
-            model_name=cp.SAVE_MODEL_NAME.split(os.extsep)[0],
+            model_name=cp.SAVE_MODEL_NAME,
         )
 
     # Save loss and performance during training
