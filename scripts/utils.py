@@ -13,6 +13,8 @@ import os
 import torch
 import albumentations as A
 import numpy as np
+import json
+import cv2
 from albumentations.pytorch import ToTensorV2
 from torchinfo import summary
 from pathlib import Path
@@ -250,3 +252,26 @@ def read_fimg(filepath):
         # Remove negative artifacts in Fv/Fm
         img[img < 0] = 0
         return img
+
+
+# Convert binary polygon .json files to pixel masks
+def binary_poly2px(filepath):
+    """Converts binary polygon mask in .json format from filepath to pixel mask.
+
+    Args:
+        filepath (str): Filepath of .json polygon mask.
+
+    Returns:
+        np.ndarray: Binary pixel mask of ints where 0 is background and 1 is the annotation.
+    """
+    # Open .json and extract points
+    poly_json = json.load(open(filepath, "r"))
+    poly_points = poly_json["shapes"][0]["points"]
+    poly_points = np.array(poly_points, dtype=np.int32)
+
+    # Create empty mask to draw on
+    mask = np.zeros((poly_json["imageHeight"], poly_json["imageWidth"]))
+
+    # Draw polygon on empty mask
+    cv2.fillPoly(mask, [poly_points], color=1)
+    return mask.astype(np.int32)
