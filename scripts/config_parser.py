@@ -17,6 +17,7 @@ TODO:
 import os
 import torch
 import torch.nn as nn
+import torchmetrics
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from json import load as json_load
@@ -69,13 +70,16 @@ BATCH_SIZE = _config_dict["BATCH_SIZE"]
 
 # Setup model settings
 MODEL_TYPE = eval(_config_dict["MODEL_TYPE"])
-N_CLASSES = _config_dict["N_CLASSES"]
+ENCODER_NAME = _config_dict["ENCODER_NAME"]
+ENCODER_WEIGHTS = _config_dict["ENCODER_WEIGHTS"]
+if ENCODER_WEIGHTS == "None":  # Allow for untrained encoder
+    ENCODER_WEIGHTS = eval(ENCODER_WEIGHTS)
 N_CHANNELS = _config_dict["N_CHANNELS"]
-BB_NAME = _config_dict["BB_NAME"]
-BB_WEIGHTS = _config_dict["BB_WEIGHTS"]
-if BB_WEIGHTS == "None":  # Allow for untrained backbone
-    BB_WEIGHTS = eval(BB_WEIGHTS)
-BB_FREEZE = eval(_config_dict["BB_FREEZE"])
+N_CLASSES = _config_dict["N_CLASSES"]
+DECODER_ATTENTION = _config_dict["DECODER_ATTENTION"]
+if DECODER_ATTENTION == "None":  # Allow for no decoder attention
+    DECODER_ATTENTION = eval(DECODER_ATTENTION)
+ENCODER_FREEZE = eval(_config_dict["ENCODER_FREEZE"])
 
 # Setup checkpointing, save and load
 CHECKPOINT_FREQ = _config_dict["CHECKPOINT_FREQ"]

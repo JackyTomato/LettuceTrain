@@ -82,29 +82,28 @@ def main():
     np.random.seed(cp.SEED)
 
     # Create DataLoaders with help from data_setup.py
-    # train_loader, test_loader = data_setup.get_loaders(
-    #     dataset=cp.DATASET,
-    #     img_dir=cp.IMG_DIR,
-    #     label_dir=cp.LABEL_DIR,
-    #     train_frac=cp.TRAIN_FRAC,
-    #     train_augs=cp.TRAIN_TRANSFORMS,
-    #     test_augs=cp.TEST_TRANSFORMS,
-    #     batch_size=cp.BATCH_SIZE,
-    #     num_workers=cp.NUM_WORKERS,
-    #     pin_memory=cp.PIN_MEMORY,
-    # )
-    train_loader, test_loader = data_setup.MNIST_digit_loaders(
-        cp.BATCH_SIZE, cp.NUM_WORKERS, cp.PIN_MEMORY
+    train_loader, test_loader = data_setup.get_loaders(
+        dataset=cp.DATASET,
+        img_dir=cp.IMG_DIR,
+        label_dir=cp.LABEL_DIR,
+        train_frac=cp.TRAIN_FRAC,
+        train_augs=cp.TRAIN_TRANSFORMS,
+        test_augs=cp.TEST_TRANSFORMS,
+        batch_size=cp.BATCH_SIZE,
+        num_workers=cp.NUM_WORKERS,
+        pin_memory=cp.PIN_MEMORY,
     )
     print("[INFO] Data succesfully loaded!")
 
     # Create model with help from model_builder.py and send to device
     model = cp.MODEL_TYPE(
-        n_classes=cp.N_CLASSES,
+        model_name=cp.MODEL_NAME,
+        encoder_name=cp.ENCODER_NAME,
+        encoder_weights=cp.ENCODER_WEIGHTS,
         n_channels=cp.N_CHANNELS,
-        bb_name=cp.BB_NAME,
-        bb_weights=cp.BB_WEIGHTS,
-        bb_freeze=cp.BB_FREEZE,
+        n_classes=cp.N_CLASSES,
+        decoder_attention=cp.DECODER_ATTENTION,
+        encoder_freeze=cp.ENCODER_FREEZE,
     ).to(cp.DEVICE)
     print("[INFO] Model initialized!")
 
