@@ -156,7 +156,7 @@ def main():
                 utils.save_checkpoint(
                     state=checkpoint,
                     target_dir=cp.SAVE_MODEL_DIR,
-                    model_name=cp.SAVE_MODEL_NAME,
+                    model_name=cp.SAVE_MODEL_NAME.split(os.extsep)[0],
                 )
 
         # Print out epoch number, loss and performance for this epoch
@@ -184,7 +184,7 @@ def main():
         utils.save_checkpoint(
             state=final_state,
             target_dir=cp.SAVE_MODEL_DIR,
-            model_name=cp.SAVE_MODEL_NAME,
+            model_name=cp.SAVE_MODEL_NAME.split(os.extsep)[0],
         )
     elif (
         cp.cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
@@ -196,28 +196,28 @@ def main():
         utils.save_checkpoint(
             state=final_state,
             target_dir=cp.SAVE_MODEL_DIR,
-            model_name=cp.SAVE_MODEL_NAME,
+            model_name=cp.SAVE_MODEL_NAME.split(os.extsep)[0],
         )
 
     # Save loss and performance during training
     utils.save_train_results(
         dict_results=results,
         target_dir=cp.SAVE_MODEL_DIR,
-        filename=f"results_{cp.SAVE_MODEL_NAME}.tsv",
+        filename=f"results_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.tsv",
     )
 
     # Save a torchinfo summary of the network
     utils.save_network_summary(
         model=model,
         target_dir=cp.SAVE_MODEL_DIR,
-        filename=f"summary_{cp.SAVE_MODEL_NAME}.txt",
+        filename=f"summary_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.txt",
         n_channels=cp.N_CHANNELS,
     )
 
     # Save the config
     utils.save_config(
         target_dir=cp.SAVE_MODEL_DIR,
-        filename=f"config_{cp.SAVE_MODEL_NAME}.json",
+        filename=f"config_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.json",
     )
 
 
