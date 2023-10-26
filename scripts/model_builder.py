@@ -70,7 +70,6 @@ class Segmenter(nn.Module):
 
             # Construct function call for eval and create model
             model_call = f"{model_call}({args_call})"
-            print(model_call)
             self.model = eval(model_call)
 
             # Freeze weights in encoder if desired

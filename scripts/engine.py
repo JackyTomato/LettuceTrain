@@ -54,7 +54,7 @@ def train_step(model, dataloader, loss_fn, performance_fn, optimizer, scaler, de
     for batch, (data, labels) in enumerate(batch_loop):
         # Add channel dimension to label if not present yet
         if len(labels.shape) == 2:
-            labels.unsqueeze(1)
+            labels = labels.unsqueeze(1)
 
         # Send data to target device
         data, labels = data.to(device), labels.to(device)
