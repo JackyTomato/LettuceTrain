@@ -15,6 +15,9 @@ from torchvision import transforms, datasets
 from PIL import Image
 from sklearn.model_selection import train_test_split
 
+# Import supporting modules
+import utils
+
 
 # Define Pytorch Dataset class for lettuce dataset
 class LettuceSegDataset(Dataset):
@@ -67,6 +70,7 @@ class LettuceSegDataset(Dataset):
     def __getitem__(self, index):
         # Retrieve image and mask, should be np.array for albumentations.transforms
         img = np.array(Image.open(self.img_paths[index]))
+        mask = utils.binary
         mask = np.array(Image.open(self.mask_path[index]))
 
         if self.transform is not None:
