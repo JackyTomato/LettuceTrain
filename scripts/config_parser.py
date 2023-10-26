@@ -70,6 +70,7 @@ BATCH_SIZE = _config_dict["BATCH_SIZE"]
 
 # Setup model settings
 MODEL_TYPE = eval(_config_dict["MODEL_TYPE"])
+MODEL_NAME = _config_dict["MODEL_NAME"]
 ENCODER_NAME = _config_dict["ENCODER_NAME"]
 ENCODER_WEIGHTS = _config_dict["ENCODER_WEIGHTS"]
 if ENCODER_WEIGHTS == "None":  # Allow for untrained encoder
