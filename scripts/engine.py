@@ -116,6 +116,10 @@ def test_step(model, dataloader, loss_fn, performance_fn, device):
     with torch.inference_mode():
         # Loop through DataLoader batches
         for batch, (data, labels) in enumerate(dataloader):
+            # Add channel dimension to label if not present yet
+            if len(labels.shape) == 3:
+                labels = labels.unsqueeze(1)
+
             # Send data to target device
             data, labels = data.to(device), labels.to(device)
 
