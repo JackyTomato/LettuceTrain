@@ -22,7 +22,7 @@ import utils
 # Define Pytorch Dataset class for lettuce dataset
 class LettuceSegDataset(Dataset):
     def __init__(
-        self, img_dir, mask_dir, is_train, train_frac=0.75, transform=None, seed=42
+        self, img_dir, label_dir, is_train, train_frac=0.75, transform=None, seed=42
     ):
         """Creates a PyTorch Dataset class of the lettuce segmantation dataset.
 
@@ -32,7 +32,7 @@ class LettuceSegDataset(Dataset):
 
         Args:
             img_dir (str): Filepath of directory containing the images.
-            mask_dir (str): Filepath of directory  containing the segmentation masks.
+            label_dir (str): Filepath of directory  containing the segmentation masks.
             is_train (bool): If true, gives train data. If false, gives test data.
             train_frac (float, optional): Fraction of data that is train. Defaults to 0.75.
             transform (albumentations.Compose, optional): Transformations for data aug. Defaults to None.
@@ -42,14 +42,14 @@ class LettuceSegDataset(Dataset):
 
         # List all image and mask filenames
         img_names = sorted(os.listdir(img_dir))
-        mask_names = sorted(os.listdir(mask_dir))
+        mask_names = sorted(os.listdir(label_dir))
 
         # Create lists of filepath for images and masks
         img_paths = []
         mask_paths = []
         for img_name, mask_name in zip(img_names, mask_names):
             img_path = os.path.join(img_dir, img_name)
-            mask_path = os.path.join(mask_dir, mask_name)
+            mask_path = os.path.join(label_dir, mask_name)
             img_paths.append(img_path)
             mask_paths.append(mask_path)
 
