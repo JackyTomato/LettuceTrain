@@ -65,7 +65,9 @@ class Segmenter(nn.Module):
                     [enc_call, channel_call, class_call, weights_call, dec_att_call]
                 )
             else:
-                args_call = ", ".join(enc_call, class_call, channel_call, weights_call)
+                args_call = ", ".join(
+                    [enc_call, class_call, channel_call, weights_call]
+                )
             args_call = re.sub(r'"None"', "None", args_call)
 
             # Construct function call for eval and create model
