@@ -11,6 +11,7 @@ TODO:
 # Import functions
 import os
 import torch
+import torch.nn.functional as F
 import albumentations as A
 import numpy as np
 import json
@@ -62,6 +63,43 @@ def load_checkpoint(checkpoint, model):
     """
     model.load_state_dict(torch.load(checkpoint)["state_dict"])
     print(f"[INFO] Loaded model state {checkpoint}")
+
+
+# Loss functions
+class DiceBCEWithLogitsLoss(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        """Combination of Dice and BCE loss function.
+
+        Adapted from:
+            https://www.kaggle.com/code/bigironsphere/loss-function-library-keras-pytorch#BCE-Dice-Loss
+
+        Dice and BCE are combined to include both Dice's accuracy and BCE's stability.
+        Additionally, according to Ma et al. (2021), compound loss functions tend to be more robust:
+            https://doi.org/10.1016/j.media.2021.102035
+            https://github.com/JunMa11/SegLoss
+
+        Args:
+            weight (optional): Irrelevant for loss function. Defaults to None.
+            size_average (optional): Irrelevant for loss function. Defaults to True.
+        """
+        super(DiceBCELoss, self).__init__()
+
+    def forward(self, inputs, targets, smooth=1):
+        # Convert logits to probabilities
+        inputs = F.sigmoid(inputs)
+
+        # Flatten label and prediction tensors
+        inputs = inputs.view(-1)
+        targets = targets.view(-1)
+
+        intersection = (inputs * targets).sum()
+        dice_loss = 1 - (2.0 * intersection + smooth) / (
+            inputs.sum() + targets.sum() + smooth
+        )
+        BCE = F.binary_cross_entropy(inputs, targets, reduction="mean")
+        Dice_BCE = BCE + dice_loss
+
+        return Dice_BCE
 
 
 # Performance metrics
