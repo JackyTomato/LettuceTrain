@@ -82,7 +82,7 @@ class DiceBCEWithLogitsLoss(nn.Module):
             weight (optional): Irrelevant for loss function. Defaults to None.
             size_average (optional): Irrelevant for loss function. Defaults to True.
         """
-        super(DiceBCELoss, self).__init__()
+        super(DiceBCEWithLogitsLoss, self).__init__()
 
     def forward(self, inputs, targets, smooth=1):
         # Convert logits to probabilities
