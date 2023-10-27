@@ -4,7 +4,6 @@ Functionality for creating lettuce dataset as PyTorch Dataset
 and loading thre train & test datasets.
 
 TODO:
-    - Test to see if it properly loads lettuce data
 """
 # Import statements
 import os
@@ -71,7 +70,7 @@ class LettuceSegDataset(Dataset):
 
     def __getitem__(self, index):
         # Retrieve image and mask, should be np.array for albumentations.transforms
-        img = np.array(Image.open(self.img_paths[index]), dtype=np.float32)
+        img = np.array(Image.open(self.img_paths[index]))
         if self.mask_paths[index].endswith(".json"):
             mask = utils.binary_poly2px(self.mask_paths[index]).astype(np.float32)
         else:

@@ -19,6 +19,7 @@ import torch
 import torch.nn as nn
 import torchmetrics
 import albumentations as A
+import cv2
 from albumentations.pytorch import ToTensorV2
 from json import load as json_load
 
