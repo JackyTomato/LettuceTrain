@@ -18,6 +18,7 @@ import os
 import torch
 import torch.nn as nn
 import torchmetrics
+import segmentation_models_pytorch as smp
 import albumentations as A
 import cv2
 from albumentations.pytorch import ToTensorV2
