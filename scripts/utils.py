@@ -87,19 +87,23 @@ class DiceBCEWithLogitsLoss(nn.Module):
 
     def forward(self, inputs, targets, smooth=1):
         # Convert logits to probabilities
-        inputs = F.sigmoid(inputs)
+        prob_inputs = F.sigmoid(inputs)
 
         # Flatten label and prediction tensors
-        inputs = inputs.view(-1)
+        prob_inputs = prob_inputs.view(-1)
         targets = targets.view(-1)
 
-        intersection = (inputs * targets).sum()
+        # Calculate Dice
+        intersection = (prob_inputs * targets).sum()
         dice_loss = 1 - (2.0 * intersection + smooth) / (
-            inputs.sum() + targets.sum() + smooth
+            prob_inputs.sum() + targets.sum() + smooth
         )
-        BCE = F.binary_cross_entropy(inputs, targets, reduction="mean")
-        Dice_BCE = BCE + dice_loss
 
+        # Calculate BCE
+        BCE = F.binary_cross_entropy_with_logits(inputs, targets, reduction="mean")
+
+        # Sum Dice and BCE
+        Dice_BCE = BCE + dice_loss
         return Dice_BCE
 
 
