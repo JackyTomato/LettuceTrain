@@ -57,7 +57,7 @@ def train_step(model, dataloader, loss_fn, performance_fn, optimizer, scaler, de
             labels = labels.unsqueeze(1)
 
         # Send data to target device
-        data, labels = data.to(device), labels.to(device)
+        data, labels = data.float().to(device), labels.float().to(device)
 
         # 1. Forward pass
         with torch.cuda.amp.autocast():
@@ -121,7 +121,7 @@ def test_step(model, dataloader, loss_fn, performance_fn, device):
                 labels = labels.unsqueeze(1)
 
             # Send data to target device
-            data, labels = data.to(device), labels.to(device)
+            data, labels = data.float().to(device), labels.float().to(device)
 
             # 1. Forward pass
             test_pred_logits = model(data)
