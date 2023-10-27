@@ -54,7 +54,7 @@ TODO:
     - Update config info
     - Allow user to specify config locations from terminal with arg
     - Make torchvision summary extract input image size from data
-    - Create support for more than just classifiers (separate scripts?)
+    - Make tensorboard script to study different runs
 """
 
 # Import statements
