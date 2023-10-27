@@ -19,16 +19,16 @@ model and save settings.
 
 Example of config.json with brief explanations as comments:
     "SEED": 42, # int, random seed used for reproducbility
+    "DEVICE": "cuda", # str, device to train "cuda" (GPU) or "cpu"
+    "NUM_WORKERS": 4, # int, number of worker processes for data loading
+    "PIN_MEMORY": "True", # bool, if True speeds up data transfer from CPU to GPU
     "LEARNING_RATE": # 1e-2, float, learning rate
     "NUM_EPOCHS": 4, # int, number of epochs
     "OPTIMIZER": "torch.optim.AdamW", # torch.optim, PyTorch optimizer class
     "SCALER": "torch.cuda.amp.GradScaler()", # torch.cuda.amp, PyTorch scaler class
     "LOSS_FN": "nn.CrossEntropyLoss()", # torch.nn, PyTorch loss class
     "PERFORMANCE_FN": "utils.class_accuracy", # function, a performance metric function
-    "DEVICE": "cuda", # str, device to train "cuda" (GPU) or "cpu"
-    "NUM_WORKERS": 4, # int, number of worker processes for data loading
-    "PIN_MEMORY": "True", # bool, if True speeds up data transfer from CPU to GPU
-    "DATA_CLASS": "data_setup.LettuceDataset", torch.utils.data.Dataset, PyTorch dataset class
+    "DATA_CLASS": "data_setup.LettuceSegDataset", torch.utils.data.Dataset, PyTorch dataset class
     "IMG_DIR": "data/img", # str, filepath of dir containing the imaging data
     "LABEL_DIR": "data/label", # str, filepath of dir containing image labels
     "TRAIN_FRAC": 0.75, # float, fraction of dataset to use for training
@@ -36,13 +36,28 @@ Example of config.json with brief explanations as comments:
         "A.Resize(height=512, width=512)",
         "ToTensorV2()"
     ], # list, list of albumentations or torchvision transforms for data augmentation
+    "TRAIN_TRANSFORMS": [
+        "A.Resize(height=480, width=480)",
+        "A.Rotate(limit=180, border_mode=cv2.BORDER_CONSTANT, p=0.5)",
+        "A.HorizontalFlip(p=0.5)",
+        "A.VerticalFlip(p=0.5)",
+        "A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5)",
+        "A.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05, p=0.5)",
+        "ToTensorV2()"
+    ], # list, list of albumentations or torchvision transforms for train data augmentation
+    "TEST_TRANSFORMS": [
+        "A.Resize(height=480, width=480)",
+        "ToTensorV2()"
+    ], # list, list of albumentations or torchvision transforms for test data augmentation
     "BATCH_SIZE": 2048, # int, size of batches to load from data
     "MODEL_TYPE": "model_builder.TipburnClassifier", # torch.nn.Module, PyTorch Module class
-    "N_CLASSES": 10, # int, number of output classes to predict
-    "N_CHANNELS": 1, # int, number of input channels of data
-    "BB_NAME": "wide_resnet50_2", # torchvision.models, model from torchvision.models for backbone
-    "BB_WEIGHTS": "IMAGENET1K_V2", # str, name weights for pretraining, "None" for no pretraining
-    "BB_FREEZE": "True", # bool, if True freezes weights of backbone
+    "MODEL_NAME": "DeepLabV3Plus", # torchvision.models or segmentation_models_pytorch, model name
+    "ENCODER_NAME": "tu-resnest101e", # str, segmentation_models_pytorch encoder name
+    "ENCODER_WEIGHTS": "imagenet", # str, name of pretrained weights
+    "N_CHANNELS": 3, # int, number of input channels of data
+    "N_CLASSES": 1, # int, number of output classes to predict
+    "DECODER_ATTENTION": "None", # bool, set decoder attenton type for Unet in segemtnation_models_pytorch
+    "ENCODER_FREEZE": "False", # bool, freeze parameters in encoder
     "CHECKPOINT_FREQ": 2, # int, the model will be saved every number of epochs equal to this value
     "SAVE_MODEL_DIR": "/output/model1", # str, filepath to which to save the model to
     "SAVE_MODEL_NAME": "test_model1.pth.tar", # str (.pt, .pth, .pt.tar, .pth.tar), filename to save model
@@ -51,7 +66,6 @@ Example of config.json with brief explanations as comments:
 }
 
 TODO:
-    - Update config info
     - Allow user to specify config locations from terminal with arg
     - Make torchvision summary extract input image size from data
     - Make tensorboard script to study different runs
