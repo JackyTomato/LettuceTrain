@@ -26,7 +26,7 @@ Example of config.json with brief explanations as comments:
     "NUM_EPOCHS": 4, # int, number of epochs
     "OPTIMIZER": "torch.optim.AdamW", # torch.optim, PyTorch optimizer class
     "SCALER": "torch.cuda.amp.GradScaler()", # torch.cuda.amp, PyTorch scaler class
-    "LOSS_FN": "nn.CrossEntropyLoss()", # torch.nn, PyTorch loss class
+    "LOSS_FN": "torch.nn.CrossEntropyLoss()", # torch.nn, PyTorch loss class
     "PERFORMANCE_FN": "utils.class_accuracy", # function, a performance metric function
     "DATA_CLASS": "data_setup.LettuceSegDataset", torch.utils.data.Dataset, PyTorch dataset class
     "IMG_DIR": "data/img", # str, filepath of dir containing the imaging data
