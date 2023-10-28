@@ -17,7 +17,6 @@ import albumentations as A
 import numpy as np
 import json
 import cv2
-from json import load as json_load
 from torchinfo import summary
 from pathlib import Path
 from shutil import copyfile
@@ -145,7 +144,7 @@ def parse_json(filepath):
     """
     # Parse .json files as dict with json's load function
     with open(filepath, "r") as json_file:
-        json_dict = json_load(json_file)
+        json_dict = json.load(json_file)
     return json_dict
 
 
