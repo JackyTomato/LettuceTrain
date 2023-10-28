@@ -104,7 +104,7 @@ def main():
 
     # Load model
     output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-    model_path = "MAnetResNest101_lr1e-4_b32_Ldicebce_ep30/MAnetResNest101_lr1e-4_b32_Ldicebce_ep30.pth.tar"
+    model_path = "PANResNest101_lr1e-4_b32_Ldicebce_ep40/PANResNest101_lr1e-4_b32_Ldicebce_ep40.pth.tar"
     full_model_path = os.path.join(output_dir, model_path)
     model = load_model(full_model_path)
 
@@ -121,7 +121,10 @@ def main():
         axes[i].imshow(img)
         axes[i].axis("off")
     fig.tight_layout()
-    plt.savefig("/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_org.png")
+    plt.savefig(
+        "/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_org.png", dpi=300
+    )
+    plt.show()
 
     # Plot ground truth
     fig, axes = plt.subplots(1, num_imgs)
@@ -132,7 +135,10 @@ def main():
         axes[i].imshow(img)
         axes[i].axis("off")
     fig.tight_layout()
-    plt.savefig("/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_gt.png")
+    plt.savefig(
+        "/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_gt.png", dpi=300
+    )
+    plt.show()
 
     # Plot predictions
     fig, axes = plt.subplots(1, num_imgs)
@@ -154,8 +160,11 @@ def main():
         axes[i].imshow(img)
         axes[i].axis("off")
     fig.tight_layout()
+    plt.savefig(
+        "/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_PAN.png",
+        dpi=300,
+    )
     plt.show()
-    plt.savefig("/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_MAnet.png")
 
 
 if __name__ == "__main__":
