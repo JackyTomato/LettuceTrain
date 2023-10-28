@@ -17,7 +17,7 @@ import albumentations as A
 import numpy as np
 import json
 import cv2
-from albumentations.pytorch import ToTensorV2
+from json import load as json_load
 from torchinfo import summary
 from pathlib import Path
 from shutil import copyfile
@@ -134,6 +134,19 @@ def class_accuracy(pred_logits, labels):
     # Calculate and return accuracy
     pred_acc = (pred_labels == labels).sum().item() / len(pred_labels)
     return pred_acc
+
+
+# .json parser for config.json files
+def parse_json(filepath):
+    """Parses the a .json file as a dictionary containing all the values.
+
+    Args:
+        filepath (str): File path to the .json file.
+    """
+    # Parse .json files as dict with json's load function
+    with open(filepath, "r") as json_file:
+        json_dict = json_load(json_file)
+    return json_dict
 
 
 # Save training results, network summaries and config

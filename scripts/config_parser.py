@@ -23,27 +23,13 @@ import segmentation_models_pytorch as smp
 import albumentations as A
 import cv2
 from albumentations.pytorch import ToTensorV2
-from json import load as json_load
 
 # Import supporting modules
 import data_setup, engine, model_builder, utils
 
 
-# .json parser for config.json
-def parse_json(filepath):
-    """Parses the a .json file as a dictionary containing all the values.
-
-    Args:
-        filepath (str): File path to the .json file.
-    """
-    # Parse config.json as dict with json's load function
-    with open(filepath, "r") as json_file:
-        json_dict = json_load(json_file)
-    return json_dict
-
-
 # Parse config.json as dict
-_config_dict = parse_json("config.json")
+_config_dict = utils.parse_json("config.json")
 
 # Assign settings to variables
 # Seed
