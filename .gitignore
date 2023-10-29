@@ -1,4 +1,5 @@
 *.pyc
+*.out
 data/*
 output/*
 graveyard.py
@@ -7,3 +8,4 @@ scripts/first_nohup.txt
 scripts/nohup.out
 scripts/skipped_images.txt
 scripts/crop_traintest.out
+scripts/UnetMit_ep100.out
