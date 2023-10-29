@@ -6,10 +6,12 @@ Analyzes different trained models using loss & performance plots and inference.
 # Import statements
 import os
 import torch
+import torchvision.transforms.functional as F
 import albumentations as A
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from torchvision.utils import make_grid, draw_segmentation_masks
 from albumentations.pytorch import ToTensorV2
 
 # Import supporting modules
@@ -103,6 +105,33 @@ def inference(model, data, move_channel=True, output_np=True):
     return preds
 
 
+# Plot multiple images on one row
+def show(imgs, save_path=None, save_dpi=300):
+    """Plots multiple images on a row.
+
+    Adapted from:
+        https://pytorch.org/vision/main/auto_examples/others/plot_visualization_utils.html
+
+    Args:
+        imgs (list, or convertible to list): List of images.
+        save_path (str): Path to save figure to. None to not save figure.
+        save_dpi (int): Dpi with which to save figure if desired.
+    """
+    if not isinstance(imgs, list):
+        imgs = [imgs]
+    fig, axs = plt.subplots(ncols=len(imgs), squeeze=False)
+    for i, img in enumerate(imgs):
+        img = img.detach()
+        img = F.to_pil_image(img)
+        axs[0, i].imshow(np.asarray(img))
+        axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+    for pos in ["right", "top", "bottom", "left"]:
+        plt.gca().spines[pos].set_visible(False)
+    if save_path is not None:
+        plt.savefig(save_path, bbox_inches="tight", pad_inches=0, dpi=save_dpi)
+    plt.show()
+
+
 def main():
     # Load data
     train_transforms = A.Compose(
@@ -131,62 +160,56 @@ def main():
         pin_memory=True,
     )
 
-    # Load model
-    output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-    model_path = "PANResNest101_lr1e-4_b32_Ldicebce_ep40/PANResNest101_lr1e-4_b32_Ldicebce_ep40.pth.tar"
-    full_model_path = os.path.join(output_dir, model_path)
-    model = load_model(full_model_path)
-
     # Load data and labels
     data, labels = next(iter(test_loader))
-    data = data.permute([0, 2, 3, 1])
+    imgs = data[17:21]
+    gt_masks = labels[17:21]
 
-    # Plot images
-    num_imgs = 4
-    offset = 17
-    fig, axes = plt.subplots(1, num_imgs)
-    for i in range(num_imgs):
-        img = data[i + offset]
-        axes[i].imshow(img)
-        axes[i].axis("off")
-    fig.tight_layout()
-    plt.savefig(
-        "/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_org.png", dpi=300
+    # Plot original images
+    org_grid = make_grid(imgs, padding=0)
+    show(
+        org_grid,
+        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_org.png",
     )
-    plt.show()
 
-    # Plot ground truth
-    fig, axes = plt.subplots(1, num_imgs)
-    for i in range(num_imgs):
-        img = data[i + offset] * np.repeat(
-            labels[i + offset][:, :, np.newaxis], repeats=3, axis=2
-        )
-        axes[i].imshow(img)
-        axes[i].axis("off")
-    fig.tight_layout()
-    plt.savefig(
-        "/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_gt.png", dpi=300
-    )
-    plt.show()
+    # Plot images masked with ground truth
+    gt_imgs = [
+        draw_segmentation_masks(img.to(torch.uint8), ~mask.bool())
+        for img, mask in zip(imgs, gt_masks)
+    ]
 
-    # Plot predictions
-    fig, axes = plt.subplots(1, num_imgs)
-    input_imgs = (
-        data[offset : (num_imgs + offset)].permute([0, 3, 1, 2]).to("cuda").float()
+    gt_grid = make_grid(gt_imgs, padding=0)
+    show(
+        gt_grid,
+        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_gt.png",
     )
-    output_masks = inference(model, input_imgs).round()
-    for i in range(num_imgs):
-        img = data[i + offset] * np.repeat(
-            output_masks[0][i], repeats=3, axis=2
-        ).astype(np.uint8)
-        axes[i].imshow(img)
-        axes[i].axis("off")
-    fig.tight_layout()
-    plt.savefig(
-        "/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_PAN.png",
-        dpi=300,
+
+    # Plot images masked with predictions
+    output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
+    model_name = "MAnetResNest101_lr1e-4_b32_Ldicebce_ep20.pth.tar"
+    full_model_path = os.path.join(
+        output_dir, model_name.split(os.extsep)[0], model_name
     )
-    plt.show()
+    device = "cuda"
+    model = load_model(full_model_path, device=device)
+
+    output_masks = inference(
+        model,
+        imgs.float().to(device),
+        move_channel=False,
+        output_np=False,
+    ).round()
+
+    masked_imgs = [
+        draw_segmentation_masks(img.to(torch.uint8), ~mask.bool())
+        for img, mask in zip(imgs, output_masks)
+    ]
+
+    pred_grid = make_grid(masked_imgs, padding=0)
+    show(
+        pred_grid,
+        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_MAnet.png",
+    )
 
 
 if __name__ == "__main__":
