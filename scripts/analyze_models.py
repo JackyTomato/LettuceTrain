@@ -74,6 +74,35 @@ def load_model(model_filepath, device="cuda"):
     return model
 
 
+# Do inference with loaded model on data of choice
+def inference(model, data, move_channel=True, output_np=True):
+    """Performs inference with a model on the given data.
+
+    Args:
+        model (torch.nn.Module): A PyTorch model as the nn.Module class.
+        data (torch.tensor): PyTorch tensor of data with structure: [batch, channel, height, width].
+        move_channel (bool, optional): If True, moves channel from 2nd to 4th dimension. Defaults to True.
+        output_np (bool, optional): If True, converts output tensor to np.ndarray. Defaults to True.
+
+    Returns:
+        _type_: _description_
+    """
+    # Make predictions
+    model = model.eval()
+    logit_preds = model(data)
+    preds = torch.sigmoid(logit_preds)
+
+    # Move channel from 2nd to 4th dimension if desired
+    if move_channel:
+        preds = preds.permute([0, 2, 3, 1])
+
+    # Push to CPU and convert to np.ndarray if desired
+    if output_np:
+        preds = preds.detach().cpu().numpy()
+
+    return preds
+
+
 def main():
     # Load data
     train_transforms = A.Compose(
@@ -145,14 +174,7 @@ def main():
     input_imgs = (
         data[offset : (num_imgs + offset)].permute([0, 3, 1, 2]).to("cuda").float()
     )
-    output_masks = (
-        torch.sigmoid(model(input_imgs))
-        .permute([0, 2, 3, 1])
-        .detach()
-        .cpu()
-        .numpy()
-        .round(),
-    )
+    output_masks = inference(model, input_imgs).round()
     for i in range(num_imgs):
         img = data[i + offset] * np.repeat(
             output_masks[0][i], repeats=3, axis=2
