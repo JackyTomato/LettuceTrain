@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
 Analyzes different trained models using loss & performance plots and inference.
+
+This script was ran in similar fashion to Rstudio, line-by-line
+for quick on-the-go predictions of different models on different images.
+Thus, the script has not been designed to be run in its entirety.
 """
 
 # Import statements
@@ -11,8 +15,11 @@ import albumentations as A
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
+from torch.utils.data import Dataset, DataLoader
 from torchvision.utils import make_grid, draw_segmentation_masks
 from albumentations.pytorch import ToTensorV2
+from tqdm import tqdm
 
 # Import supporting modules
 import data_setup, model_builder, utils
@@ -132,7 +139,32 @@ def show(imgs, save_path=None, save_dpi=300):
     plt.show()
 
 
+# Define dir with images
+class InferDataset(Dataset):
+    def __init__(self, img_dir, transform):
+        self.transform = transform
+        # List all image filenames
+        img_names = os.listdir(img_dir)
+
+        # Create lists of filepath for images and masks
+        self.img_paths = []
+        for img_name in img_names:
+            img_path = os.path.join(img_dir, img_name)
+            self.img_paths.append(img_path)
+
+    def __len__(self):
+        return len(self.img_paths)
+
+    def __getitem__(self, index):
+        img = np.array(Image.open(self.img_path[index]))
+        augmentations = self.transform(image=img)
+        img = augmentations["image"]
+
+        return img
+
+
 def main():
+    # Mini-batch inference
     # Load data
     train_transforms = A.Compose(
         [
@@ -169,7 +201,7 @@ def main():
     org_grid = make_grid(imgs, padding=0)
     show(
         org_grid,
-        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_org.png",
+        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_org.png",
     )
 
     # Plot images masked with ground truth
@@ -181,12 +213,12 @@ def main():
     gt_grid = make_grid(gt_imgs, padding=0)
     show(
         gt_grid,
-        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_gt.png",
+        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_gt.png",
     )
 
     # Plot images masked with predictions
     output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-    model_name = "MAnetResNest101_lr1e-4_b32_Ldicebce_ep20.pth.tar"
+    model_name = "PANRes2Net50-14_lr1e-4_b32_Ldicebce_ep100.pth.tar"
     full_model_path = os.path.join(
         output_dir, model_name.split(os.extsep)[0], model_name
     )
@@ -208,8 +240,46 @@ def main():
     pred_grid = make_grid(masked_imgs, padding=0)
     show(
         pred_grid,
-        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/output/inference_MAnet.png",
+        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_PANRes2Net.png",
     )
+
+    # From directory inference
+    # Define dir with images
+    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/inference/in/chris_1tp"
+
+    # List all image filenames
+    img_names = os.listdir(img_dir)
+
+    # Create lists of filepath for images and masks
+    img_paths = []
+    for img_name in img_names:
+        img_path = os.path.join(img_dir, img_name)
+        img_paths.append(img_path)
+
+    # Retrieve images
+    device = "cuda"
+
+    transforms = A.Compose([A.Resize(height=1472, width=1472), ToTensorV2()])
+
+    data = torch.empty([0, 4, 1472, 1472]).to(device)
+    for img_path in tqdm(img_paths, desc="Loading images"):
+        img = np.array(Image.open(img_path))
+        img = img[:3]
+        augmentations = transforms(image=img)
+        img = augmentations["image"]
+        img = img.unsqueeze(0).to(device)
+        data = torch.cat((data, img))
+
+    plt.imshow(data[0].permute([1, 2, 0]).int().detach().cpu().numpy())
+    plt.show()
+
+    # Make predictions
+    output_masks = inference(
+        model,
+        data.float().to(device),
+        move_channel=False,
+        output_np=False,
+    ).round()
 
 
 if __name__ == "__main__":
