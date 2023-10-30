@@ -2,6 +2,7 @@
 *.out
 data/*
 output/*
+inference/*
 graveyard.py
 scripts/config.json
 scripts/first_nohup.txt
