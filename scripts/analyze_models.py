@@ -141,14 +141,24 @@ def show(imgs, save_path=None, save_dpi=300):
 
 # Define dir with images
 class InferDataset(Dataset):
-    def __init__(self, img_dir, transform):
+    def __init__(self, img_dir, transform=None):
+        """Creates a PyTorch Dataset class of image data for inference.
+
+        oads data by providing the image and the corresponding filename.
+        The filename is given alongside the image to allow for automated naming of output files.
+
+        Args:
+            img_dir (str): Path to directory containing the input images.
+            transform (albumentations.Compose, optional): Transformations for data aug. Defaults to None.
+        """
         self.transform = transform
+
         # List all image filenames
-        img_names = os.listdir(img_dir)
+        self.img_names = os.listdir(img_dir)
 
         # Create lists of filepath for images and masks
         self.img_paths = []
-        for img_name in img_names:
+        for img_name in self.img_names:
             img_path = os.path.join(img_dir, img_name)
             self.img_paths.append(img_path)
 
@@ -157,10 +167,12 @@ class InferDataset(Dataset):
 
     def __getitem__(self, index):
         img = np.array(Image.open(self.img_path[index]))
-        augmentations = self.transform(image=img)
-        img = augmentations["image"]
 
-        return img
+        if self.transform is not None:
+            augmentations = self.transform(image=img)
+            img = augmentations["image"]
+
+        return img, self.img_names[index]
 
 
 def main():
@@ -246,34 +258,32 @@ def main():
     # From directory inference
     # Define dir with images
     img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/inference/in/chris_1tp"
-
-    # List all image filenames
-    img_names = os.listdir(img_dir)
-
-    # Create lists of filepath for images and masks
-    img_paths = []
-    for img_name in img_names:
-        img_path = os.path.join(img_dir, img_name)
-        img_paths.append(img_path)
-
-    # Retrieve images
-    device = "cuda"
-
     transforms = A.Compose([A.Resize(height=1472, width=1472), ToTensorV2()])
 
-    data = torch.empty([0, 4, 1472, 1472]).to(device)
-    for img_path in tqdm(img_paths, desc="Loading images"):
-        img = np.array(Image.open(img_path))
-        img = img[:3]
-        augmentations = transforms(image=img)
-        img = augmentations["image"]
-        img = img.unsqueeze(0).to(device)
-        data = torch.cat((data, img))
+    # Load data
+    dataset = InferDataset(img_dir=img_dir, transform=transforms)
+    loader = DataLoader(
+        dataset,
+        batch_size=64,
+        num_workers=8,
+        pin_memory=True,
+        shuffle=False,
+    )
 
     plt.imshow(data[0].permute([1, 2, 0]).int().detach().cpu().numpy())
     plt.show()
 
     # Make predictions
+    for input_img in tqdm(loader, desc="Batches"):
+        output_masks = inference(
+            model,
+            input_img.float().to(device),
+            move_channel=True,
+            output_np=True,
+        ).round()
+
+        vec_save_img = np.vectorize(save)
+
     output_masks = inference(
         model,
         data.float().to(device),
