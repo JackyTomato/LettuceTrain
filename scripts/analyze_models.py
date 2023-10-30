@@ -269,7 +269,7 @@ def main():
     dataset = InferDataset(img_dir=img_dir, transform=transforms)
     loader = DataLoader(
         dataset,
-        batch_size=16,
+        batch_size=32,
         num_workers=4,
         pin_memory=True,
         shuffle=False,
