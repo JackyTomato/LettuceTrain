@@ -17,9 +17,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
-from torchvision.utils import make_grid, draw_segmentation_masks
+from torchvision.utils import make_grid, draw_segmentation_masks, save_image
 from albumentations.pytorch import ToTensorV2
 from tqdm import tqdm
+from pathlib import Path
 
 # Import supporting modules
 import data_setup, model_builder, utils
@@ -98,8 +99,9 @@ def inference(model, data, move_channel=True, output_np=True):
     """
     # Make predictions
     model = model.eval()
-    logit_preds = model(data)
-    preds = torch.sigmoid(logit_preds)
+    with torch.inference_mode():
+        logit_preds = model(data)
+        preds = torch.sigmoid(logit_preds)
 
     # Move channel from 2nd to 4th dimension if desired
     if move_channel:
@@ -166,7 +168,10 @@ class InferDataset(Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, index):
-        img = np.array(Image.open(self.img_path[index]))
+        img = np.array(Image.open(self.img_paths[index]))
+
+        if img.shape[2] == 4:
+            img = img[:, :, :3]
 
         if self.transform is not None:
             augmentations = self.transform(image=img)
@@ -258,38 +263,47 @@ def main():
     # From directory inference
     # Define dir with images
     img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/inference/in/chris_1tp"
-    transforms = A.Compose([A.Resize(height=1472, width=1472), ToTensorV2()])
+    transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
     # Load data
     dataset = InferDataset(img_dir=img_dir, transform=transforms)
     loader = DataLoader(
         dataset,
-        batch_size=64,
-        num_workers=8,
+        batch_size=16,
+        num_workers=4,
         pin_memory=True,
         shuffle=False,
     )
 
-    plt.imshow(data[0].permute([1, 2, 0]).int().detach().cpu().numpy())
-    plt.show()
-
     # Make predictions
-    for input_img in tqdm(loader, desc="Batches"):
+    for input_imgs, filenames in tqdm(loader, desc="Batches"):
         output_masks = inference(
             model,
-            input_img.float().to(device),
-            move_channel=True,
-            output_np=True,
-        ).round()
+            input_imgs.float().to(device),
+            move_channel=False,
+            output_np=False,
+        )
+        output_masks = output_masks.round().bool()
+        for output_mask, input_img, filename in zip(
+            output_masks, input_imgs, filenames
+        ):
+            # Create target directory to save
+            target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/chris_1tp"
+            target_dir_path = Path(target_dir)
+            target_dir_path.mkdir(parents=True, exist_ok=True)
 
-        vec_save_img = np.vectorize(save)
+            # Apply predicted mask on img
+            masked_img = draw_segmentation_masks(input_img, ~output_mask)
+            masked_img = masked_img.float()
+            masked_img = (masked_img - masked_img.min()) / (
+                masked_img.max() - masked_img.min()
+            )
 
-    output_masks = inference(
-        model,
-        data.float().to(device),
-        move_channel=False,
-        output_np=False,
-    ).round()
+            # Save image
+            save_filepath = os.path.join(
+                target_dir, f"{filename.split(os.extsep)[0]}_PANmask.png"
+            )
+            save_image(masked_img, fp=save_filepath)
 
 
 if __name__ == "__main__":
