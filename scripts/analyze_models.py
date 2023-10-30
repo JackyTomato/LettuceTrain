@@ -262,7 +262,7 @@ def main():
 
     # From directory inference
     # Define dir with images
-    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/inference/in/chris_1tp"
+    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/inference/in/mini_rgb_crops"
     transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
     # Load data
@@ -274,6 +274,14 @@ def main():
         pin_memory=True,
         shuffle=False,
     )
+
+    # Load model
+    device = "cuda"
+    model_name = "DeepLabV3PlusRes2Net50-14_lr1e-4_b32_Ldicebce_ep100.pth.tar"
+    full_model_path = os.path.join(
+        output_dir, model_name.split(os.extsep)[0], model_name
+    )
+    model = load_model(full_model_path, device=device)
 
     # Make predictions
     for input_imgs, filenames in tqdm(loader, desc="Batches"):
@@ -288,22 +296,22 @@ def main():
             output_masks, input_imgs, filenames
         ):
             # Create target directory to save
-            target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/chris_1tp"
+            target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/mini_rgb_crops_DeepLabV3Plus"
             target_dir_path = Path(target_dir)
             target_dir_path.mkdir(parents=True, exist_ok=True)
 
             # Apply predicted mask on img
             masked_img = draw_segmentation_masks(input_img, ~output_mask)
-            masked_img = masked_img.float()
-            masked_img = (masked_img - masked_img.min()) / (
-                masked_img.max() - masked_img.min()
-            )
+            masked_img = masked_img.detach()
+            masked_img = F.to_pil_image(masked_img)
+            masked_img = np.asarray(masked_img)
 
             # Save image
-            save_filepath = os.path.join(
-                target_dir, f"{filename.split(os.extsep)[0]}_PANmask.png"
+            utils.save_img(
+                masked_img,
+                target_dir=target_dir,
+                filename=f"{filename.split(os.extsep)[0]}_DeepLabV3Plusmask.png",
             )
-            save_image(masked_img, fp=save_filepath)
 
 
 if __name__ == "__main__":
