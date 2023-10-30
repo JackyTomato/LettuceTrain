@@ -273,7 +273,7 @@ def save_img(img, target_dir, filename):
 
     # Save img with skimage if np.ndarray
     if type(img) is np.ndarray:
-        io.imsave(filepath, img)
+        io.imsave(filepath, img, check_contrast=False)
 
     # Save img with PIL if Image
     elif type(img) is Image.Image:
