@@ -262,7 +262,7 @@ def main():
 
     # From directory inference
     # Define dir with images
-    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/inference/in/mini_rgb_crops"
+    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/rgb_crops"
     transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
     # Load data
@@ -277,7 +277,8 @@ def main():
 
     # Load model
     device = "cuda"
-    model_name = "DeepLabV3PlusRes2Net50-14_lr1e-4_b32_Ldicebce_ep100.pth.tar"
+    output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
+    model_name = "UnetMit-b3_lr1e-4_b32_Ldicebce_ep100.pth.tar"
     full_model_path = os.path.join(
         output_dir, model_name.split(os.extsep)[0], model_name
     )
@@ -296,7 +297,7 @@ def main():
             output_masks, input_imgs, filenames
         ):
             # Create target directory to save
-            target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/mini_rgb_crops_DeepLabV3Plus"
+            target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks"
             target_dir_path = Path(target_dir)
             target_dir_path.mkdir(parents=True, exist_ok=True)
 
@@ -310,7 +311,7 @@ def main():
             utils.save_img(
                 masked_img,
                 target_dir=target_dir,
-                filename=f"{filename.split(os.extsep)[0]}_DeepLabV3Plusmask.png",
+                filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_bg_mask.png",
             )
 
 
