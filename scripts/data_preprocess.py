@@ -779,18 +779,24 @@ def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0)
 
 def main():
     # Set config
-    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/RGB"
-    fm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/Fm"
-    fvfm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/FvFm"
+    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/RGB"
+    fm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/Fm"
+    fvfm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/FvFm"
     rgb_crop_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_whole_crops"
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/rgb_crops"
     )
-    fm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/fm_whole_crops"
+    fm_crop_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fm_crops"
+    )
     fvfm_crop_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/fvfm_whole_crops"
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fvfm_crops"
     )
-    rgb_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_masks"
-    fm_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/fm_masks"
+    rgb_mask_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/rgb_masks"
+    )
+    fm_mask_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fm_masks"
+    )
     CORES = 20
     CROP = True
     OVERLAY_IMG = True
