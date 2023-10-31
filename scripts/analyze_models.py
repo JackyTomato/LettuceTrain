@@ -302,7 +302,7 @@ def main():
             target_dir_path.mkdir(parents=True, exist_ok=True)
 
             # Apply predicted mask on img
-            masked_img = draw_segmentation_masks(input_img, ~output_mask)
+            masked_img = draw_segmentation_masks(input_img, ~output_mask, alpha=1)
             masked_img = masked_img.detach()
             masked_img = F.to_pil_image(masked_img)
             masked_img = np.asarray(masked_img)
