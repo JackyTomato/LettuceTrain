@@ -20,6 +20,9 @@ from skimage.transform import rescale
 from multiprocessing.pool import Pool
 from tqdm import tqdm
 from functools import partial
+from PIL import Image
+
+# Import supporting modules
 import utils
 
 
@@ -662,12 +665,8 @@ def path_overlay_crop(
     # Rescale RGB image to allow overlaying with fluorescence images
     re_rgb = rescale(image=rgb, scale=scale_rgb, anti_aliasing=True)
 
-    # Normalize Fm values to range from 0 to 1
-    fm = fm / np.max(fm)
-
-    # Convert RGB back to uint8 after rescaling and convert Fm and Fv/Fm to uint8
+    # Convert RGB back to uint8 after rescaling and convert Fv/Fm to uint8
     re_rgb = util.img_as_ubyte(re_rgb)
-    fm = util.img_as_ubyte(fm)
     fvfm = util.img_as_ubyte(fvfm)
 
     # Extract tray ID from RGB image filename
@@ -715,10 +714,13 @@ def path_overlay_crop(
         for fm_crop in fm_crops:
             old_name = os.path.basename(imgtype_paths[0])
             new_name = (
-                f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.png"
+                f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.tif"
             )
             count += 1
-            utils.save_img(fm_crop, target_dir=fm_save_dir, filename=new_name)
+            fm_crop = Image.fromarray(fm_crop)
+            save_path = os.path.join(fm_save_dir, new_name)
+            fm_crop.save(save_path)
+            # utils.save_img(fm_crop, target_dir=fm_save_dir, filename=new_name)
 
     if fvfm_save_dir is not None:
         # Count to add correct area number and plantname
