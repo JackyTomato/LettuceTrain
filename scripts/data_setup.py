@@ -4,6 +4,7 @@ Functionality for creating lettuce dataset as PyTorch Dataset
 and loading thre train & test datasets.
 
 TODO:
+    - Adjust label for stitched images
 """
 # Import statements
 import os
