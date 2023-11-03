@@ -98,9 +98,7 @@ class LettuceSegDataset(Dataset):
         # Retrieve image and mask, should be np.array for albumentations.transforms
         img = np.array(Image.open(self.img_paths[index]))
         size = img.shape[:2]
-        print(size)
         if self.mask_paths[index].endswith(".json"):
-            print("Reading .json")
             mask = utils.binary_poly2px(self.mask_paths[index], custom_size=size)
         elif self.mask_paths[index].endswith(
             (".png", ".jpg", ".jpeg", ".tif", ".tiff")
