@@ -44,14 +44,40 @@ class LettuceSegDataset(Dataset):
         img_names = sorted(os.listdir(img_dir))
         mask_names = sorted(os.listdir(label_dir))
 
+        # Check if there is an incomplete number of masks
+        if len(img_names) != len(mask_names):
+            incomplete_masks = True
+            print(
+                "[INFO] Numbers of images and masks are inequal, cancel if unintended!"
+            )
+
         # Create lists of filepath for images and masks
-        img_paths = []
-        mask_paths = []
-        for img_name, mask_name in zip(img_names, mask_names):
-            img_path = os.path.join(img_dir, img_name)
-            mask_path = os.path.join(label_dir, mask_name)
-            img_paths.append(img_path)
-            mask_paths.append(mask_path)
+        if incomplete_masks is False:
+            img_paths = []
+            mask_paths = []
+            for img_name, mask_name in zip(img_names, mask_names):
+                img_path = os.path.join(img_dir, img_name)
+                mask_path = os.path.join(label_dir, mask_name)
+                img_paths.append(img_path)
+                mask_paths.append(mask_path)
+        else:
+            img_paths = []
+            mask_paths = []
+            mask_names = np.array(mask_names)
+            for img_name in img_names:
+                img_path = os.path.join(img_dir, img_name)
+                img_paths.append(img_path)
+
+                # List raw image name in mask paths for missing masks
+                raw_name = img_name.split(os.extsep)[0]
+                match_ind = np.flatnonzero(
+                    np.core.defchararray.find(mask_names, raw_name) != -1
+                )
+                if len(match_ind) == 1:
+                    mask_path = os.path.join(label_dir, mask_names[match_ind[0]])
+                elif len(match_ind) == 0:
+                    mask_path = raw_name
+                mask_paths.append(mask_path)
 
         # Split train and test sets
         img_train, img_test, mask_train, mask_test = train_test_split(
@@ -72,10 +98,17 @@ class LettuceSegDataset(Dataset):
     def __getitem__(self, index):
         # Retrieve image and mask, should be np.array for albumentations.transforms
         img = np.array(Image.open(self.img_paths[index]))
+        size = img.shape[:2]
+        print(size)
         if self.mask_paths[index].endswith(".json"):
-            mask = utils.binary_poly2px(self.mask_paths[index])
-        else:
+            print("Reading .json")
+            mask = utils.binary_poly2px(self.mask_paths[index], custom_size=size)
+        elif self.mask_paths[index].endswith(
+            (".png", ".jpg", ".jpeg", ".tif", ".tiff")
+        ):
             mask = np.array(Image.open(self.mask_paths[index]))
+        else:
+            mask = np.zeros(size, dtype=np.int32)  # Create empty mask for missing mask
         if 255.0 in mask:
             mask[mask == 255.0] = 1.0
 
