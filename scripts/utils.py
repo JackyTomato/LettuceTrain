@@ -311,23 +311,28 @@ def read_fimg(filepath):
 
 
 # Convert binary polygon .json files to pixel masks
-def binary_poly2px(filepath):
+def binary_poly2px(filepath, custom_size=None):
     """Converts binary polygon mask in .json format from filepath to pixel mask.
 
     Args:
         filepath (str): Filepath of .json polygon mask.
+        custom_size (list/tuple, optional): Contains height and width as int for custom mask size. Defaults to None.
 
     Returns:
         np.ndarray: Binary pixel mask of ints where 0 is background and 1 is the annotation.
     """
-    # Open .json and extract points
+    # Open .json
     poly_json = json.load(open(filepath, "r"))
-    poly_points = poly_json["shapes"][0]["points"]
-    poly_points = np.array(poly_points, dtype=np.int32)
 
     # Create empty mask to draw on
-    mask = np.zeros((poly_json["imageHeight"], poly_json["imageWidth"]))
+    if custom_size is None:
+        mask = np.zeros((poly_json["imageHeight"], poly_json["imageWidth"]))
+    else:
+        mask = np.zeros(custom_size)
 
-    # Draw polygon on empty mask
-    cv2.fillPoly(mask, [poly_points], color=1)
+    # Extract and draw points on empty mask
+    for shape in poly_json["shapes"]:
+        poly_points = shape["points"]
+        poly_points = np.array(poly_points, dtype=np.int32)
+        cv2.fillPoly(mask, [poly_points], color=1)
     return mask.astype(np.int32)
