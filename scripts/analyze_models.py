@@ -181,138 +181,144 @@ class InferDataset(Dataset):
 
 
 def main():
-    # Mini-batch inference
-    # Load data
-    train_transforms = A.Compose(
-        [
-            A.Resize(height=480, width=480),
-            A.Rotate(limit=180, border_mode=cv2.BORDER_CONSTANT, p=0.5),
-            A.HorizontalFlip(p=0.5),
-            A.VerticalFlip(p=0.5),
-            A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
-            A.ColorJitter(
-                brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05, p=0.5
-            ),
-            ToTensorV2(),
+    MINI_INFER = False
+    DIR_INFER = True
+    if MINI_INFER:
+        # Mini-batch inference
+        # Load data
+        train_transforms = A.Compose(
+            [
+                A.Resize(height=480, width=480),
+                A.Rotate(limit=180, border_mode=cv2.BORDER_CONSTANT, p=0.5),
+                A.HorizontalFlip(p=0.5),
+                A.VerticalFlip(p=0.5),
+                A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
+                A.ColorJitter(
+                    brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05, p=0.5
+                ),
+                ToTensorV2(),
+            ]
+        )
+        test_transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
+        train_loader, test_loader = data_setup.get_loaders(
+            dataset=data_setup.LettuceSegDataset,
+            img_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_crops",
+            label_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_masks",
+            train_frac=0.75,
+            train_augs=train_transforms,
+            test_augs=test_transforms,
+            batch_size=32,
+            num_workers=8,
+            pin_memory=True,
+        )
+
+        # Load data and labels
+        data, labels = next(iter(test_loader))
+        imgs = data[17:21]
+        gt_masks = labels[17:21]
+
+        # Plot original images
+        org_grid = make_grid(imgs, padding=0)
+        show(
+            org_grid,
+            save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_org.png",
+        )
+
+        # Plot images masked with ground truth
+        gt_imgs = [
+            draw_segmentation_masks(img.to(torch.uint8), ~mask.bool())
+            for img, mask in zip(imgs, gt_masks)
         ]
-    )
-    test_transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
-    train_loader, test_loader = data_setup.get_loaders(
-        dataset=data_setup.LettuceSegDataset,
-        img_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_crops",
-        label_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_masks",
-        train_frac=0.75,
-        train_augs=train_transforms,
-        test_augs=test_transforms,
-        batch_size=32,
-        num_workers=8,
-        pin_memory=True,
-    )
 
-    # Load data and labels
-    data, labels = next(iter(test_loader))
-    imgs = data[17:21]
-    gt_masks = labels[17:21]
+        gt_grid = make_grid(gt_imgs, padding=0)
+        show(
+            gt_grid,
+            save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_gt.png",
+        )
 
-    # Plot original images
-    org_grid = make_grid(imgs, padding=0)
-    show(
-        org_grid,
-        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_org.png",
-    )
+        # Plot images masked with predictions
+        output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
+        model_name = "PANRes2Net50-14_lr1e-4_b32_Ldicebce_ep100.pth.tar"
+        full_model_path = os.path.join(
+            output_dir, model_name.split(os.extsep)[0], model_name
+        )
+        device = "cuda"
+        model = load_model(full_model_path, device=device)
 
-    # Plot images masked with ground truth
-    gt_imgs = [
-        draw_segmentation_masks(img.to(torch.uint8), ~mask.bool())
-        for img, mask in zip(imgs, gt_masks)
-    ]
-
-    gt_grid = make_grid(gt_imgs, padding=0)
-    show(
-        gt_grid,
-        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_gt.png",
-    )
-
-    # Plot images masked with predictions
-    output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-    model_name = "PANRes2Net50-14_lr1e-4_b32_Ldicebce_ep100.pth.tar"
-    full_model_path = os.path.join(
-        output_dir, model_name.split(os.extsep)[0], model_name
-    )
-    device = "cuda"
-    model = load_model(full_model_path, device=device)
-
-    output_masks = inference(
-        model,
-        imgs.float().to(device),
-        move_channel=False,
-        output_np=False,
-    ).round()
-
-    masked_imgs = [
-        draw_segmentation_masks(img.to(torch.uint8), ~mask.bool())
-        for img, mask in zip(imgs, output_masks)
-    ]
-
-    pred_grid = make_grid(masked_imgs, padding=0)
-    show(
-        pred_grid,
-        save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_PANRes2Net.png",
-    )
-
-    # From directory inference
-    # Define dir with images
-    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/rgb_crops"
-    transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
-
-    # Load data
-    dataset = InferDataset(img_dir=img_dir, transform=transforms)
-    loader = DataLoader(
-        dataset,
-        batch_size=32,
-        num_workers=4,
-        pin_memory=True,
-        shuffle=False,
-    )
-
-    # Load model
-    device = "cuda"
-    output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-    model_name = "UnetMit-b3_lr1e-4_b32_Ldicebce_ep100.pth.tar"
-    full_model_path = os.path.join(
-        output_dir, model_name.split(os.extsep)[0], model_name
-    )
-    model = load_model(full_model_path, device=device)
-
-    # Make predictions
-    for input_imgs, filenames in tqdm(loader, desc="Batches"):
         output_masks = inference(
             model,
-            input_imgs.float().to(device),
+            imgs.float().to(device),
             move_channel=False,
             output_np=False,
+        ).round()
+
+        masked_imgs = [
+            draw_segmentation_masks(img.to(torch.uint8), ~mask.bool())
+            for img, mask in zip(imgs, output_masks)
+        ]
+
+        pred_grid = make_grid(masked_imgs, padding=0)
+        show(
+            pred_grid,
+            save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_PANRes2Net.png",
         )
-        output_masks = output_masks.round().bool()
-        for output_mask, input_img, filename in zip(
-            output_masks, input_imgs, filenames
-        ):
-            # Create target directory to save
-            target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks"
-            target_dir_path = Path(target_dir)
-            target_dir_path.mkdir(parents=True, exist_ok=True)
 
-            # Apply predicted mask on img
-            masked_img = draw_segmentation_masks(input_img, ~output_mask, alpha=1)
-            masked_img = masked_img.detach()
-            masked_img = F.to_pil_image(masked_img)
-            masked_img = np.asarray(masked_img)
+    elif DIR_INFER:
+        # From directory inference
+        # Define dir with images
+        img_dir = (
+            "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/rgb_crops"
+        )
+        transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
-            # Save image
-            utils.save_img(
-                masked_img,
-                target_dir=target_dir,
-                filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_bg_mask.png",
+        # Load data
+        dataset = InferDataset(img_dir=img_dir, transform=transforms)
+        loader = DataLoader(
+            dataset,
+            batch_size=8,
+            num_workers=2,
+            pin_memory=True,
+            shuffle=False,
+        )
+
+        # Load model
+        device = "cuda"
+        output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
+        model_name = "UnetMit-b3_lr1e-4_b32_Ldicebce_ep100.pth.tar"
+        full_model_path = os.path.join(
+            output_dir, model_name.split(os.extsep)[0], model_name
+        )
+        model = load_model(full_model_path, device=device)
+
+        # Make predictions
+        for input_imgs, filenames in tqdm(loader, desc="Batches"):
+            output_masks = inference(
+                model,
+                input_imgs.float().to(device),
+                move_channel=False,
+                output_np=False,
             )
+            output_masks = output_masks.round().bool()
+            for output_mask, input_img, filename in zip(
+                output_masks, input_imgs, filenames
+            ):
+                # Create target directory to save
+                target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/UnetMit-b3_bg_masks"
+                target_dir_path = Path(target_dir)
+                target_dir_path.mkdir(parents=True, exist_ok=True)
+
+                # Apply predicted mask on img
+                masked_img = draw_segmentation_masks(input_img, ~output_mask, alpha=1)
+                masked_img = masked_img.detach()
+                masked_img = F.to_pil_image(masked_img)
+                masked_img = np.asarray(masked_img)
+
+                # Save image
+                utils.save_img(
+                    masked_img,
+                    target_dir=target_dir,
+                    filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_bg_mask.png",
+                )
 
 
 if __name__ == "__main__":
