@@ -718,9 +718,7 @@ def path_overlay_crop(
             )
             count += 1
             fm_crop = Image.fromarray(fm_crop)
-            save_path = os.path.join(fm_save_dir, new_name)
-            fm_crop.save(save_path)
-            # utils.save_img(fm_crop, target_dir=fm_save_dir, filename=new_name)
+            utils.save_img(fm_crop, target_dir=fm_save_dir, filename=new_name)
 
     if fvfm_save_dir is not None:
         # Count to add correct area number and plantname
@@ -781,23 +779,23 @@ def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0)
 
 def main():
     # Set config
-    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/RGB"
-    fm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/Fm"
-    fvfm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/FvFm"
+    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/RGB"
+    fm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/Fm"
+    fvfm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/FvFm"
     rgb_crop_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/rgb_crops"
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/rgb_crops"
     )
     fm_crop_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fm_crops"
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/fm_crops"
     )
     fvfm_crop_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fvfm_crops"
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/fvfm_crops"
     )
     rgb_mask_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/rgb_masks"
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/rgb_masks"
     )
     fm_mask_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fm_masks"
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/fm_masks"
     )
     CORES = 20
     CROP = True
