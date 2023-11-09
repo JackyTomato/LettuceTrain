@@ -69,6 +69,9 @@ class LettuceSegDataset(Dataset):
 
                 # List raw image name in mask paths for missing masks
                 raw_name = img_name.split(os.extsep)[0]
+                if raw_name.endswith("_bg_mask"):  # for filenames of bg masked images
+                    raw_name = raw_name.removesuffix("_bg_mask")
+
                 match_ind = np.flatnonzero(
                     np.core.defchararray.find(mask_names, raw_name) != -1
                 )
@@ -115,7 +118,7 @@ class LettuceSegDataset(Dataset):
             img = augmentations["image"]
             mask = augmentations["mask"]
 
-        return img, mask
+        return img, mask, self.img_paths[index], self.mask_paths[index]
 
 
 # Define data loaders for training and testing
