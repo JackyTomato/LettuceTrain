@@ -135,6 +135,44 @@ def class_accuracy(pred_logits, labels):
     return pred_acc
 
 
+def binary_jaccard(pred_logits, labels):
+    """Calculate Jaccard index for binary semantic segmentation.
+
+    When both predictions and ground-truths are empty, the Jaccard is considered 1.
+    When predictions aren't empty but the ground-truths are, the Jaccard is 0.
+    If predictions and ground-truth aren't both empty, the Jaccard is simply the
+    intersection over union.
+
+    Args:
+        pred_logits (_type_): _description_
+        labels (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    # Convert pred_logits to predictions of 0 or 1
+    preds = torch.sigmoid(pred_logits)
+    preds = (preds > 0.5).float()
+
+    # If predictions and ground-truth are both empty
+    if (preds.sum() == 0) and (labels.sum() == 0):
+        print("empty empty")
+        jaccard = 1
+
+    # If predictions isn't empty but ground-truth is empty
+    elif (preds.sum() > 0) and (labels.sum() == 0):
+        print("empty")
+        jaccard = 0
+
+    # If predictions and ground-truth aren't both empty
+    else:
+        intersect = (preds * labels).sum()
+        union = preds.sum() + labels.sum() - intersect
+        jaccard = intersect / union
+
+    return jaccard
+
+
 # .json parser for config.json files
 def parse_json(filepath):
     """Parses the a .json file as a dictionary containing all the values.
