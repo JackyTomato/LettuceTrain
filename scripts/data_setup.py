@@ -118,7 +118,7 @@ class LettuceSegDataset(Dataset):
             img = augmentations["image"]
             mask = augmentations["mask"]
 
-        return img, mask, self.img_paths[index], self.mask_paths[index]
+        return img, mask
 
 
 # Define data loaders for training and testing
