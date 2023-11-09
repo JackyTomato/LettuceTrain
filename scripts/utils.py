@@ -143,34 +143,42 @@ def binary_jaccard(pred_logits, labels):
     If predictions and ground-truth aren't both empty, the Jaccard is simply the
     intersection over union.
 
+    The Jaccard for a batch of images is calculated as the mean Jaccard index
+    over the whole batch.
+
     Args:
-        pred_logits (_type_): _description_
-        labels (_type_): _description_
+        pred_logits (torch.Tensor): Batch of segmentation predictions as tensor of floats.
+        labels (torch.Tensor): Batch of segmentation ground-truths as tensor of floats.
 
     Returns:
-        _type_: _description_
+        float: _description_
     """
     # Convert pred_logits to predictions of 0 or 1
     preds = torch.sigmoid(pred_logits)
     preds = (preds > 0.5).float()
 
-    # If predictions and ground-truth are both empty
-    if (preds.sum() == 0) and (labels.sum() == 0):
-        print("empty empty")
-        jaccard = 1
+    # Calculate Jaccards for every sample in batch
+    jaccards = []
+    for pred, label in zip(preds, labels):
+        # If predictions and ground-truth are both empty
+        if (pred.sum() == 0) and (label.sum() == 0):
+            jaccard = 1
 
-    # If predictions isn't empty but ground-truth is empty
-    elif (preds.sum() > 0) and (labels.sum() == 0):
-        print("empty")
-        jaccard = 0
+        # If predictions isn't empty but ground-truth is empty
+        elif (pred.sum() > 0) and (label.sum() == 0):
+            jaccard = 0
 
-    # If predictions and ground-truth aren't both empty
-    else:
-        intersect = (preds * labels).sum()
-        union = preds.sum() + labels.sum() - intersect
-        jaccard = intersect / union
+        # If predictions and ground-truth aren't both empty
+        else:
+            intersect = (pred * label).sum()
+            union = pred.sum() + label.sum() - intersect
+            jaccard = intersect / union
 
-    return jaccard
+        jaccards.append(jaccard)
+
+    # Calculate mean Jaccard over whole batch
+    mean_jaccard = sum(jaccards) / len(jaccards)
+    return mean_jaccard
 
 
 # .json parser for config.json files
