@@ -107,6 +107,7 @@ def main():
         batch_size=cp.BATCH_SIZE,
         num_workers=cp.NUM_WORKERS,
         pin_memory=cp.PIN_MEMORY,
+        seed=cp.SEED,
     )
     print("[INFO] Data succesfully loaded!")
 

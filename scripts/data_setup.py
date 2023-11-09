@@ -132,6 +132,7 @@ def get_loaders(
     num_workers,
     train_frac=0.75,
     pin_memory=True,
+    seed=42,
 ):
     """Creates PyTorch DataLoaders for train and test dataset.
 
@@ -145,6 +146,7 @@ def get_loaders(
         num_workers (int): Number of worker processes for data loading.
         train_frac (float, optional): Fraction of data to be used for training. Defaults to 0.75.
         pin_memory (bool, optional): Speeds up data transfer from CPU to GPU. Defaults to True.
+        seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
 
     Returns:
         _type_: _description_
@@ -156,6 +158,7 @@ def get_loaders(
         train_frac=train_frac,
         is_train=True,
         transform=train_augs,
+        seed=seed,
     )
     test_ds = dataset(
         img_dir=img_dir,
@@ -163,6 +166,7 @@ def get_loaders(
         train_frac=train_frac,
         is_train=False,
         transform=test_augs,
+        seed=seed,
     )
 
     # Create DataLoaders of datasets
