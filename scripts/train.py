@@ -74,6 +74,7 @@ TODO:
 # Import statements
 import os
 import torch
+import torch.nn as nn
 import numpy as np
 import random
 from tqdm import tqdm
@@ -120,7 +121,8 @@ def main():
         n_classes=cp.N_CLASSES,
         decoder_attention=cp.DECODER_ATTENTION,
         encoder_freeze=cp.ENCODER_FREEZE,
-    ).to(cp.DEVICE)
+    )
+    model = nn.DataParallel(model).to(cp.DEVICE)
     print("[INFO] Model initialized!")
 
     # Start training with help from engine.py
