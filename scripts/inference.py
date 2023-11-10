@@ -93,7 +93,7 @@ def load_model(model_filepath, device="cuda", multi_gpu=False):
 
 
 # Do inference with loaded model on data of choice
-def inference(model, data, multi_gpu=False, move_channel=True, output_np=True):
+def inference(model, data, move_channel=True, output_np=True):
     """Performs inference with a model on the given data.
 
     Args:
