@@ -93,17 +93,21 @@ def load_model(model_filepath, device="cuda", multi_gpu=False):
 
 
 # Do inference with loaded model on data of choice
-def inference(model, data, move_channel=True, output_np=True):
+def inference(
+    model, data, labels=None, perform_fn=None, move_channel=True, output_np=True
+):
     """Performs inference with a model on the given data.
 
     Args:
         model (torch.nn.Module): A PyTorch model as the nn.Module class.
         data (torch.tensor): PyTorch tensor of data with structure: [batch, channel, height, width].
+        labels (torch.tensor, optional): PyTorch tensor of labels. Defaults to None.
+        perform_fn (function, optional): Function that calculates performance. Defaults to None.
         move_channel (bool, optional): If True, moves channel from 2nd to 4th dimension. Defaults to True.
         output_np (bool, optional): If True, converts output tensor to np.ndarray. Defaults to True.
 
     Returns:
-        _type_: _description_
+        tensor/tuple(tensor, list): Tensor of predictions and optionally performance as list of floats.
     """
     # Make predictions
     model = model.eval()
@@ -113,13 +117,21 @@ def inference(model, data, move_channel=True, output_np=True):
 
     # Move channel from 2nd to 4th dimension if desired
     if move_channel:
-        preds = preds.permute([0, 2, 3, 1])
+        result = preds.permute([0, 2, 3, 1])
 
     # Push to CPU and convert to np.ndarray if desired
     if output_np:
-        preds = preds.detach().cpu().numpy()
+        result = preds.detach().cpu().numpy()
 
-    return preds
+    # Calculate performance if desired
+    if (labels is not None) and (perform_fn is not None):
+        performs = []
+        for pred, label in zip(preds, labels):
+            perform = perform_fn(logit_preds, labels)
+            performs.append(perform)
+        result = (result, performs)
+
+    return result
 
 
 # Plot multiple images on one row
@@ -150,11 +162,11 @@ def show(imgs, save_path=None, save_dpi=300):
 
 
 # Define dir with images
-class InferDataset(Dataset):
+class LettuceSegNoLabelDataset(Dataset):
     def __init__(self, img_dir, transform=None):
         """Creates a PyTorch Dataset class of image data for inference.
 
-        oads data by providing the image and the corresponding filename.
+        Loads data by providing the image and the corresponding filename.
         The filename is given alongside the image to allow for automated naming of output files.
 
         Args:
@@ -189,147 +201,78 @@ class InferDataset(Dataset):
 
 
 def main():
+    # Set globals and directories
     MULTI_GPU = True
-    MINI_INFER = False
-    DIR_INFER = True
-    if MINI_INFER:
-        # Mini-batch inference
-        # Load data
-        train_transforms = A.Compose(
-            [
-                A.Resize(height=480, width=480),
-                A.Rotate(limit=180, border_mode=cv2.BORDER_CONSTANT, p=0.5),
-                A.HorizontalFlip(p=0.5),
-                A.VerticalFlip(p=0.5),
-                A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
-                A.ColorJitter(
-                    brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05, p=0.5
-                ),
-                ToTensorV2(),
-            ]
-        )
-        test_transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
-        train_loader, test_loader = data_setup.get_loaders(
-            dataset=data_setup.LettuceSegDataset,
-            img_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_crops",
-            label_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_masks",
-            train_frac=0.75,
-            train_augs=train_transforms,
-            test_augs=test_transforms,
-            batch_size=32,
-            num_workers=8,
-            pin_memory=True,
-        )
+    PERFORM_FN = utils.binary_jaccard()
+    RGB_ALPHA = None
 
-        # Load data and labels
-        data, labels = next(iter(test_loader))
-        imgs = data[17:21]
-        gt_masks = labels[17:21]
+    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined"
+    label_dir = ""
+    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb_masks_combined"
 
-        # Plot original images
-        org_grid = make_grid(imgs, padding=0)
-        show(
-            org_grid,
-            save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_org.png",
-        )
+    DEVICE = "cuda:0"
+    output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
+    model_name = "tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
 
-        # Plot images masked with ground truth
-        gt_imgs = [
-            draw_segmentation_masks(img.to(torch.uint8), ~mask.bool())
-            for img, mask in zip(imgs, gt_masks)
-        ]
+    # From directory inference
+    # Define transforms
+    transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
-        gt_grid = make_grid(gt_imgs, padding=0)
-        show(
-            gt_grid,
-            save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_gt.png",
-        )
+    # Load data
+    if (PERFORM_FN is not None) and (label_dir is not None):
+        dataset = 
+    else:
+        dataset = LettuceSegNoLabelDataset(img_dir=img_dir, transform=transforms)
+    loader = DataLoader(
+        dataset,
+        batch_size=8,
+        num_workers=2,
+        pin_memory=True,
+        shuffle=False,
+    )
 
-        # Plot images masked with predictions
-        output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-        model_name = "PANRes2Net50-14_lr1e-4_b32_Ldicebce_ep100.pth.tar"
-        full_model_path = os.path.join(
-            output_dir, model_name.split(os.extsep)[0], model_name
-        )
-        device = "cuda:0"
-        model = load_model(full_model_path, device=device, multi_gpu=MULTI_GPU)
+    # Load model
+    full_model_path = os.path.join(
+        output_dir, model_name.split(os.extsep)[0], model_name
+    )
+    model = load_model(full_model_path, device=DEVICE, multi_gpu=MULTI_GPU)
 
+    # Make predictions
+    for input_imgs, filenames in tqdm(loader, desc="Batches"):
+        if "cuda" in DEVICE:
+            torch.cuda.set_device(DEVICE)
+            input_imgs.cuda()
         output_masks = inference(
             model,
-            imgs.float().to(device),
+            input_imgs.float(),
             move_channel=False,
             output_np=False,
-        ).round()
-
-        masked_imgs = [
-            draw_segmentation_masks(img.to(torch.uint8), ~mask.bool())
-            for img, mask in zip(imgs, output_masks)
-        ]
-
-        pred_grid = make_grid(masked_imgs, padding=0)
-        show(
-            pred_grid,
-            save_path="/lustre/BIF/nobackup/to001/thesis_MBF/inference/out/inference_PANRes2Net.png",
         )
+        output_masks = output_masks.round().bool()
+        for output_mask, input_img, filename in zip(
+            output_masks, input_imgs, filenames
+        ):
+            # Create target directory to save
+            target_dir_path = Path(target_dir)
+            target_dir_path.mkdir(parents=True, exist_ok=True)
 
-    elif DIR_INFER:
-        # From directory inference
-        # Define dir with images
-        img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined"
-        transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
-
-        # Load data
-        dataset = InferDataset(img_dir=img_dir, transform=transforms)
-        loader = DataLoader(
-            dataset,
-            batch_size=8,
-            num_workers=2,
-            pin_memory=True,
-            shuffle=False,
-        )
-
-        # Load model
-        device = "cuda:0"
-        output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-        model_name = "tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
-
-        full_model_path = os.path.join(
-            output_dir, model_name.split(os.extsep)[0], model_name
-        )
-        model = load_model(full_model_path, device=device, multi_gpu=MULTI_GPU)
-
-        # Make predictions
-        for input_imgs, filenames in tqdm(loader, desc="Batches"):
-            if "cuda" in device:
-                torch.cuda.set_device(device)
-                input_imgs.cuda()
-            output_masks = inference(
-                model,
-                input_imgs.float(),
-                move_channel=False,
-                output_np=False,
-            )
-            output_masks = output_masks.round().bool()
-            for output_mask, input_img, filename in zip(
-                output_masks, input_imgs, filenames
-            ):
-                # Create target directory to save
-                target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb_masks_combined"
-                target_dir_path = Path(target_dir)
-                target_dir_path.mkdir(parents=True, exist_ok=True)
-
-                # Apply predicted mask on img
+            if RGB_ALPHA is not None:
+                # Apply predicted mask on input image
                 masked_img = draw_segmentation_masks(input_img, ~output_mask, alpha=0.7)
                 masked_img = masked_img.detach()
                 masked_img = F.to_pil_image(masked_img)
                 masked_img = np.asarray(masked_img)
+            else:
+                # Output mask as binary image
+                masked_img = masked_img.detach().cpu().numpy()
+                masked_img = np.asarray(masked_img)
 
-                # Save image
-                utils.save_img(
-                    masked_img,
-                    target_dir=target_dir,
-                    filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png",
-                )
+            # Save image
+            utils.save_img(
+                masked_img,
+                target_dir=target_dir,
+                filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png",
+            )
 
 
 if __name__ == "__main__":
