@@ -5,6 +5,10 @@ Analyzes different trained models using loss & performance plots and inference.
 This script was ran in similar fashion to Rstudio, line-by-line
 for quick on-the-go predictions of different models on different images.
 Thus, the script has not been designed to be run in its entirety.
+
+TODO:
+    - Save performance as tsv
+    - 
 """
 
 # Import statements
@@ -220,7 +224,14 @@ def main():
 
     # Load data
     if (PERFORM_FN is not None) and (label_dir is not None):
-        dataset = 
+        dataset = data_setup.LettuceSegDataset(
+            img_dir=img_dir,
+            label_dir=label_dir,
+            is_train=True,
+            train_frac=1,
+            transform=transforms,
+            give_name=True,
+        )
     else:
         dataset = LettuceSegNoLabelDataset(img_dir=img_dir, transform=transforms)
     loader = DataLoader(
@@ -238,10 +249,16 @@ def main():
     model = load_model(full_model_path, device=DEVICE, multi_gpu=MULTI_GPU)
 
     # Make predictions
-    for input_imgs, filenames in tqdm(loader, desc="Batches"):
-        if "cuda" in DEVICE:
-            torch.cuda.set_device(DEVICE)
-            input_imgs.cuda()
+    for batch in tqdm(loader, desc="Batches"):
+        if len(batch) == 3:
+            input_imgs, labels, filenames = batch
+            if "cuda" in DEVICE:
+                torch.cuda.set_device(DEVICE)
+                input_imgs.cuda()
+                labels.cuda()
+        else:
+            input_imgs, filenames = batch
+
         output_masks = inference(
             model,
             input_imgs.float(),
