@@ -129,7 +129,7 @@ class LettuceSegDataset(Dataset):
 
         # Also provide image name if desired
         if self.give_name:
-            img_name = self.img_names[index]
+            img_name = self.img_names[index].split(os.extsep)[0]
             return img, mask, img_name
         else:
             return img, mask
