@@ -10,6 +10,7 @@ Thus, the script has not been designed to be run in its entirety.
 # Import statements
 import os
 import torch
+import torch.nn as nn
 import torchvision.transforms.functional as F
 import albumentations as A
 import cv2
@@ -27,7 +28,7 @@ import data_setup, model_builder, utils
 
 
 # Load model from saved model filename
-def load_model(model_filepath, device="cuda"):
+def load_model(model_filepath, device="cuda", multi_gpu=False):
     """Loads a model from the filepath of the saved model.
 
     The model is loaded by parsing the corresponding saved config .json,
@@ -41,6 +42,7 @@ def load_model(model_filepath, device="cuda"):
     Args:
         model_filepath (str): Filepath of saved model states.
         device (str, optional): Device to send model to, "cpu" or "cuda". Defaults to "cuda".
+        multi_gpu (bool): If True, loads model on multiple GPUs, assuming device is "cuda".
 
     Returns:
         torch.nn.Module: Loaded model as a PyTorch nn.Module class.
@@ -76,7 +78,13 @@ def load_model(model_filepath, device="cuda"):
         n_classes=N_CLASSES,
         decoder_attention=DECODER_ATTENTION,
         encoder_freeze=ENCODER_FREEZE,
-    ).to(device)
+    )
+    if multi_gpu:
+        model = nn.DataParallel(model)
+    if "cuda" in device:
+        torch.cuda.set_device(device)
+        model = model.cuda()
+
     print("[INFO] Model initialized!")
 
     # Load saved model state into freshly initialized model
@@ -85,7 +93,7 @@ def load_model(model_filepath, device="cuda"):
 
 
 # Do inference with loaded model on data of choice
-def inference(model, data, move_channel=True, output_np=True):
+def inference(model, data, multi_gpu=False, move_channel=True, output_np=True):
     """Performs inference with a model on the given data.
 
     Args:
@@ -181,6 +189,7 @@ class InferDataset(Dataset):
 
 
 def main():
+    MULTI_GPU = True
     MINI_INFER = False
     DIR_INFER = True
     if MINI_INFER:
@@ -242,8 +251,8 @@ def main():
         full_model_path = os.path.join(
             output_dir, model_name.split(os.extsep)[0], model_name
         )
-        device = "cuda"
-        model = load_model(full_model_path, device=device)
+        device = "cuda:0"
+        model = load_model(full_model_path, device=device, multi_gpu=MULTI_GPU)
 
         output_masks = inference(
             model,
@@ -266,9 +275,7 @@ def main():
     elif DIR_INFER:
         # From directory inference
         # Define dir with images
-        img_dir = (
-            "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/rgb_crops"
-        )
+        img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined"
         transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
         # Load data
@@ -282,19 +289,23 @@ def main():
         )
 
         # Load model
-        device = "cuda"
+        device = "cuda:0"
         output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-        model_name = "UnetMit-b3_lr1e-4_b32_Ldicebce_ep100.pth.tar"
+        model_name = "tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
+
         full_model_path = os.path.join(
             output_dir, model_name.split(os.extsep)[0], model_name
         )
-        model = load_model(full_model_path, device=device)
+        model = load_model(full_model_path, device=device, multi_gpu=MULTI_GPU)
 
         # Make predictions
         for input_imgs, filenames in tqdm(loader, desc="Batches"):
+            if "cuda" in device:
+                torch.cuda.set_device(device)
+                input_imgs.cuda()
             output_masks = inference(
                 model,
-                input_imgs.float().to(device),
+                input_imgs.float(),
                 move_channel=False,
                 output_np=False,
             )
@@ -303,12 +314,12 @@ def main():
                 output_masks, input_imgs, filenames
             ):
                 # Create target directory to save
-                target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn2/UnetMit-b3_bg_masks"
+                target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb_masks_combined"
                 target_dir_path = Path(target_dir)
                 target_dir_path.mkdir(parents=True, exist_ok=True)
 
                 # Apply predicted mask on img
-                masked_img = draw_segmentation_masks(input_img, ~output_mask, alpha=1)
+                masked_img = draw_segmentation_masks(input_img, ~output_mask, alpha=0.7)
                 masked_img = masked_img.detach()
                 masked_img = F.to_pil_image(masked_img)
                 masked_img = np.asarray(masked_img)
@@ -317,7 +328,7 @@ def main():
                 utils.save_img(
                     masked_img,
                     target_dir=target_dir,
-                    filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_bg_mask.png",
+                    filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png",
                 )
 
 
