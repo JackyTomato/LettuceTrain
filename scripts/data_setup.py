@@ -21,7 +21,14 @@ import utils
 # Define Pytorch Dataset class for lettuce dataset
 class LettuceSegDataset(Dataset):
     def __init__(
-        self, img_dir, label_dir, is_train, train_frac=0.75, transform=None, seed=42
+        self,
+        img_dir,
+        label_dir,
+        is_train,
+        train_frac=0.75,
+        transform=None,
+        seed=42,
+        give_name=False,
     ):
         """Creates a PyTorch Dataset class of the lettuce segmantation dataset.
 
@@ -36,15 +43,17 @@ class LettuceSegDataset(Dataset):
             train_frac (float, optional): Fraction of data that is train. Defaults to 0.75.
             transform (albumentations.Compose, optional): Transformations for data aug. Defaults to None.
             seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
+            give_name (bool, optional): If True, dataset also provides image name.
         """
         self.transform = transform
+        self.give_name = give_name
 
         # List all image and mask filenames
-        img_names = sorted(os.listdir(img_dir))
+        self.img_names = sorted(os.listdir(img_dir))
         mask_names = sorted(os.listdir(label_dir))
 
         # Check if there is an incomplete number of masks
-        if len(img_names) != len(mask_names):
+        if len(self.img_names) != len(mask_names):
             incomplete_masks = True
             print(
                 "[INFO] Numbers of images and masks are inequal, cancel if unintended!"
@@ -54,7 +63,7 @@ class LettuceSegDataset(Dataset):
         if incomplete_masks is False:
             img_paths = []
             mask_paths = []
-            for img_name, mask_name in zip(img_names, mask_names):
+            for img_name, mask_name in zip(self.img_names, mask_names):
                 img_path = os.path.join(img_dir, img_name)
                 mask_path = os.path.join(label_dir, mask_name)
                 img_paths.append(img_path)
@@ -63,7 +72,7 @@ class LettuceSegDataset(Dataset):
             img_paths = []
             mask_paths = []
             mask_names = np.array(mask_names)
-            for img_name in img_names:
+            for img_name in self.img_names:
                 img_path = os.path.join(img_dir, img_name)
                 img_paths.append(img_path)
 
@@ -118,7 +127,12 @@ class LettuceSegDataset(Dataset):
             img = augmentations["image"]
             mask = augmentations["mask"]
 
-        return img, mask
+        # Also provide image name if desired
+        if self.give_name:
+            img_name = self.img_names[index]
+            return img, mask, img_name
+        else:
+            return img, mask
 
 
 # Define data loaders for training and testing
