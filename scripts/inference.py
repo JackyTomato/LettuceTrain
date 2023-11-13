@@ -131,8 +131,10 @@ def inference(
     # Calculate performance if desired
     if (labels is not None) and (perform_fn is not None):
         performs = []
-        for pred, label in zip(preds, labels):
-            perform = perform_fn(pred, label)
+        for logit_pred, label in zip(logit_preds, labels):
+            batch_pred = logit_pred.unsqueeze(0)
+            batch_label = label.reshape(batch_pred.shape)
+            perform = perform_fn(batch_pred, batch_label)
             performs.append(perform)
         return preds, performs
 
@@ -224,6 +226,7 @@ def main():
     model_name = "tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
 
     # From directory inference
+    # With performance tracking
     if (PERFORM_FN is not None) and (label_dir is not None):
         dataset = data_setup.LettuceSegDataset(
             img_dir=img_dir,
@@ -233,51 +236,47 @@ def main():
             transform=transforms,
             give_name=True,
         )
-    else:
-        dataset = LettuceSegNoLabelDataset(img_dir=img_dir, transform=transforms)
-    loader = DataLoader(
-        dataset,
-        batch_size=8,
-        num_workers=2,
-        pin_memory=True,
-        shuffle=False,
-    )
+        loader = DataLoader(
+            dataset,
+            batch_size=8,
+            num_workers=2,
+            pin_memory=True,
+            shuffle=False,
+        )
 
-    # Load model
-    full_model_path = os.path.join(
-        model_dir, model_name.split(os.extsep)[0], model_name
-    )
-    model = load_model(full_model_path, device=DEVICE, multi_gpu=MULTI_GPU)
+        # Load model
+        full_model_path = os.path.join(
+            model_dir, model_name.split(os.extsep)[0], model_name
+        )
+        model = load_model(full_model_path, device=DEVICE, multi_gpu=MULTI_GPU)
 
-    # Make predictions
-    for batch in tqdm(loader, desc="Batches"):
-        # If batch contains labels for performance tracking
-        if len(batch) == 3:
-            input_imgs, labels, filenames = batch
+        # Track performance
+        perform_path = os.path.join(target_dir, perform_save_name)
+        with open(perform_path, "w") as perform_tsv:
+            # Make predictions
+            for batch in tqdm(loader, desc="Batches"):
+                input_imgs, labels, filenames = batch
 
-            # Move data and labels to device
-            if "cuda" in DEVICE:
-                torch.cuda.set_device(DEVICE)
-                input_imgs.cuda()
-                labels.cuda()
+                # Move data and labels to device
+                if "cuda" in DEVICE:
+                    torch.cuda.set_device(DEVICE)
+                    input_imgs = input_imgs.cuda()
+                    labels = labels.cuda()
 
-            # Get output from model
-            output_masks, performs = inference(
-                model,
-                input_imgs.float(),
-                labels.float(),
-                perform_fn=PERFORM_FN,
-                move_channel=False,
-                output_np=False,
-            )
-            output_masks = output_masks.round().bool()
+                # Get output from model
+                output_masks, performs = inference(
+                    model,
+                    input_imgs.float(),
+                    labels.float(),
+                    perform_fn=PERFORM_FN,
+                    move_channel=False,
+                    output_np=False,
+                )
+                output_masks = output_masks.round().bool()
 
-            # Save results
-            target_dir_path = Path(target_dir)
-            target_dir_path.mkdir(parents=True, exist_ok=True)
-
-            perform_path = os.path.join(target_dir, perform_save_name)
-            with open(perform_path, "w") as perform_tsv:
+                # Save results
+                target_dir_path = Path(target_dir)
+                target_dir_path.mkdir(parents=True, exist_ok=True)
                 for output_mask, input_img, filename, perform in zip(
                     output_masks, input_imgs, filenames, performs
                 ):
@@ -293,7 +292,7 @@ def main():
                     else:
                         # Output mask as binary image
                         masked_img = output_mask[0, :, :]
-                        masked_img = masked_img.cpu().numpy()
+                        masked_img = masked_img.detach().cpu().numpy()
                         masked_img = util.img_as_ubyte(masked_img)
 
                     # Save image
@@ -303,13 +302,33 @@ def main():
                     # Write performance to tsv file
                     new_line = f"{new_name}\t{perform}\n"
                     perform_tsv.write(new_line)
-        else:
+        print(f"Performance has been saved to {perform_path}!")
+
+    # Without performance tracking
+    else:
+        dataset = LettuceSegNoLabelDataset(img_dir=img_dir, transform=transforms)
+        loader = DataLoader(
+            dataset,
+            batch_size=8,
+            num_workers=2,
+            pin_memory=True,
+            shuffle=False,
+        )
+
+        # Load model
+        full_model_path = os.path.join(
+            model_dir, model_name.split(os.extsep)[0], model_name
+        )
+        model = load_model(full_model_path, device=DEVICE, multi_gpu=MULTI_GPU)
+
+        # Make predictions
+        for batch in tqdm(loader, desc="Batches"):
             input_imgs, filenames = batch
 
             # Move data to device
             if "cuda" in DEVICE:
                 torch.cuda.set_device(DEVICE)
-                input_imgs.cuda()
+                input_imgs = input_imgs.cuda()
 
             # Get output from model
             output_masks = inference(
