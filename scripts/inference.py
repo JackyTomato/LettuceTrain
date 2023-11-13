@@ -204,11 +204,11 @@ def main():
     # Set globals and directories
     MULTI_GPU = True
     PERFORM_FN = utils.binary_jaccard
-    RGB_ALPHA = None
+    RGB_ALPHA = True
 
     img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined"
     label_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/stitched_tb_masks_combined"
-    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb_masks_combined"
+    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb-rgb_masks_combined"
     perform_save_name = "TrainTest_tipburn_tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.tsv"
 
     transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
@@ -243,6 +243,8 @@ def main():
         model = load_model(full_model_path, device=DEVICE, multi_gpu=MULTI_GPU)
 
         # Track performance
+        target_dir_path = Path(target_dir)
+        target_dir_path.mkdir(parents=True, exist_ok=True)
         perform_path = os.path.join(target_dir, perform_save_name)
         with open(perform_path, "w") as perform_tsv:
             # Make predictions
@@ -266,9 +268,6 @@ def main():
                 )
                 output_masks = output_masks.round().bool()
 
-                # Save results
-                target_dir_path = Path(target_dir)
-                target_dir_path.mkdir(parents=True, exist_ok=True)
                 for output_mask, input_img, filename, perform in zip(
                     output_masks, input_imgs, filenames, performs
                 ):
