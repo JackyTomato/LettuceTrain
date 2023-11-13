@@ -213,14 +213,13 @@ def main():
     img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined"
     label_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/stitched_tb_masks_combined"
     target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb_masks_combined"
+    perform_save_name = "TrainTest_tipburn_tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.tsv"
 
     transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
     DEVICE = "cuda:0"
+    model_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
     model_name = "tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
-
-    output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-    perform_save_name = "TrainTest_tipburn_tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.tsv"
 
     # From directory inference
     if (PERFORM_FN is not None) and (label_dir is not None):
@@ -244,7 +243,7 @@ def main():
 
     # Load model
     full_model_path = os.path.join(
-        output_dir, model_name.split(os.extsep)[0], model_name
+        model_dir, model_name.split(os.extsep)[0], model_name
     )
     model = load_model(full_model_path, device=DEVICE, multi_gpu=MULTI_GPU)
 
@@ -275,7 +274,7 @@ def main():
             target_dir_path = Path(target_dir)
             target_dir_path.mkdir(parents=True, exist_ok=True)
 
-            perform_path = os.path.join(output_dir, perform_save_name)
+            perform_path = os.path.join(target_dir, perform_save_name)
             with open(perform_path, "w") as perform_tsv:
                 for output_mask, input_img, filename, perform in zip(
                     output_masks, input_imgs, filenames, performs
