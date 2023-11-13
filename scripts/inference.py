@@ -121,11 +121,11 @@ def inference(
 
     # Move channel from 2nd to 4th dimension if desired
     if move_channel:
-        result = preds.permute([0, 2, 3, 1])
+        preds = preds.permute([0, 2, 3, 1])
 
     # Push to CPU and convert to np.ndarray if desired
     if output_np:
-        result = preds.detach().cpu().numpy()
+        preds = preds.detach().cpu().numpy()
 
     # Calculate performance if desired
     if (labels is not None) and (perform_fn is not None):
@@ -133,9 +133,10 @@ def inference(
         for pred, label in zip(preds, labels):
             perform = perform_fn(pred, label)
             performs.append(perform)
-        result = (result, performs)
+        return preds, performs
 
-    return result
+    else:
+        return preds
 
 
 # Plot multiple images on one row
