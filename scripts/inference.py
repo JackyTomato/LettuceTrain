@@ -291,7 +291,7 @@ def main():
                         masked_img = np.asarray(masked_img)
                     else:
                         # Output mask as binary image
-                        masked_img = masked_img.detach().cpu().numpy()
+                        masked_img = output_mask.detach().cpu().numpy()
                         masked_img = np.asarray(masked_img)
 
                     # Save image
@@ -337,7 +337,7 @@ def main():
                     masked_img = np.asarray(masked_img)
                 else:
                     # Output mask as binary image
-                    masked_img = masked_img.detach().cpu().numpy()
+                    masked_img = output_mask.detach().cpu().numpy()
                     masked_img = np.asarray(masked_img)
 
                     # Save image
