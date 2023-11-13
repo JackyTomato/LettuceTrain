@@ -1,14 +1,6 @@
 #!/usr/bin/env python3
 """
-Analyzes different trained models using loss & performance plots and inference.
-
-This script was ran in similar fashion to Rstudio, line-by-line
-for quick on-the-go predictions of different models on different images.
-Thus, the script has not been designed to be run in its entirety.
-
-TODO:
-    - Save performance as tsv
-    - 
+Runs inference of models. Script can save results and corresponding performance.
 """
 
 # Import statements
