@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
+from skimage import util
 from torch.utils.data import Dataset, DataLoader
 from torchvision.utils import make_grid, draw_segmentation_masks, save_image
 from albumentations.pytorch import ToTensorV2
@@ -227,7 +228,7 @@ def main():
         dataset = data_setup.LettuceSegDataset(
             img_dir=img_dir,
             label_dir=label_dir,
-            is_train=True,
+            is_train=None,
             train_frac=1,
             transform=transforms,
             give_name=True,
@@ -291,15 +292,15 @@ def main():
                         masked_img = np.asarray(masked_img)
                     else:
                         # Output mask as binary image
-                        masked_img = output_mask.detach().cpu().numpy()
-                        masked_img = np.asarray(masked_img)
+                        masked_img = output_mask[0, :, :]
+                        masked_img = masked_img.cpu().numpy()
+                        masked_img = util.img_as_ubyte(masked_img)
 
                     # Save image
                     new_name = f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png"
                     utils.save_img(masked_img, target_dir=target_dir, filename=new_name)
 
                     # Write performance to tsv file
-                    perform.detach()
                     new_line = f"{new_name}\t{perform}\n"
                     perform_tsv.write(new_line)
         else:
@@ -337,8 +338,9 @@ def main():
                     masked_img = np.asarray(masked_img)
                 else:
                     # Output mask as binary image
-                    masked_img = output_mask.detach().cpu().numpy()
-                    masked_img = np.asarray(masked_img)
+                    masked_img = output_mask[0, :, :]
+                    masked_img = masked_img.cpu().numpy()
+                    masked_img = util.img_as_ubyte(masked_img)
 
                     # Save image
                     new_name = f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png"
