@@ -90,18 +90,22 @@ class LettuceSegDataset(Dataset):
                     mask_path = raw_name
                 mask_paths.append(mask_path)
 
-        # Split train and test sets
-        img_train, img_test, mask_train, mask_test = train_test_split(
-            img_paths, mask_paths, train_size=train_frac, random_state=seed
-        )
+        # Split into train and test sets if desired
+        if train_frac < 1:
+            img_train, img_test, mask_train, mask_test = train_test_split(
+                img_paths, mask_paths, train_size=train_frac, random_state=seed
+            )
 
-        # Give train or test data as requested
-        if is_train:
-            self.img_paths = img_train
-            self.mask_paths = mask_train
+            # Give train or test data as requested
+            if is_train:
+                self.img_paths = img_train
+                self.mask_paths = mask_train
+            else:
+                self.img_paths = img_test
+                self.mask_paths = mask_test
         else:
-            self.img_paths = img_test
-            self.mask_paths = mask_test
+            self.img_paths = img_paths
+            self.mask_paths = mask_paths
 
     def __len__(self):
         return len(self.img_paths)
