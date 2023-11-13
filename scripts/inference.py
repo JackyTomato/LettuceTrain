@@ -207,7 +207,7 @@ class LettuceSegNoLabelDataset(Dataset):
 def main():
     # Set globals and directories
     MULTI_GPU = True
-    PERFORM_FN = utils.binary_jaccard()
+    PERFORM_FN = utils.binary_jaccard
     RGB_ALPHA = None
 
     img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined"
@@ -215,8 +215,10 @@ def main():
     target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb_masks_combined"
 
     DEVICE = "cuda:0"
-    output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
     model_name = "tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
+
+    output_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
+    perform_save_name = "TrainTest_tipburn_tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.tsv"
 
     # From directory inference
     # Define transforms
@@ -261,41 +263,47 @@ def main():
                 labels.cuda()
 
             # Get output from model
-            output_masks = inference(
+            output_masks, performs = inference(
                 model,
                 input_imgs.float(),
                 labels.float(),
-                perform_fn=utils.binary_jaccard,
+                perform_fn=PERFORM_FN,
                 move_channel=False,
                 output_np=False,
             )
             output_masks = output_masks.round().bool()
-            for output_mask, input_img, filename in zip(
-                output_masks, input_imgs, filenames
-            ):
-                # Create target directory to save
-                target_dir_path = Path(target_dir)
-                target_dir_path.mkdir(parents=True, exist_ok=True)
 
-                if RGB_ALPHA is not None:
-                    # Apply predicted mask on input image
-                    masked_img = draw_segmentation_masks(
-                        input_img, ~output_mask, alpha=0.7
-                    )
-                    masked_img = masked_img.detach()
-                    masked_img = F.to_pil_image(masked_img)
-                    masked_img = np.asarray(masked_img)
-                else:
-                    # Output mask as binary image
-                    masked_img = masked_img.detach().cpu().numpy()
-                    masked_img = np.asarray(masked_img)
+            # Save results
+            target_dir_path = Path(target_dir)
+            target_dir_path.mkdir(parents=True, exist_ok=True)
 
-                # Save image
-                utils.save_img(
-                    masked_img,
-                    target_dir=target_dir,
-                    filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png",
-                )
+            perform_path = os.path.join(output_dir, perform_save_name)
+            with open(perform_path, "w") as perform_tsv:
+                for output_mask, input_img, filename, perform in zip(
+                    output_masks, input_imgs, filenames, performs
+                ):
+                    # Adjust mask before saving
+                    if RGB_ALPHA is not None:
+                        # Apply predicted mask on input image
+                        masked_img = draw_segmentation_masks(
+                            input_img, ~output_mask, alpha=0.7
+                        )
+                        masked_img = masked_img.detach()
+                        masked_img = F.to_pil_image(masked_img)
+                        masked_img = np.asarray(masked_img)
+                    else:
+                        # Output mask as binary image
+                        masked_img = masked_img.detach().cpu().numpy()
+                        masked_img = np.asarray(masked_img)
+
+                    # Save image
+                    new_name = f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png"
+                    utils.save_img(masked_img, target_dir=target_dir, filename=new_name)
+
+                    # Write performance to tsv file
+                    perform.detach()
+                    new_line = f"{new_name}\t{perform}\n"
+                    perform_tsv.write(new_line)
         else:
             input_imgs, filenames = batch
 
@@ -312,13 +320,15 @@ def main():
                 output_np=False,
             )
             output_masks = output_masks.round().bool()
+
+            # Create target directory to save
+            target_dir_path = Path(target_dir)
+            target_dir_path.mkdir(parents=True, exist_ok=True)
+
             for output_mask, input_img, filename in zip(
                 output_masks, input_imgs, filenames
             ):
-                # Create target directory to save
-                target_dir_path = Path(target_dir)
-                target_dir_path.mkdir(parents=True, exist_ok=True)
-
+                # Adjust mask before saving
                 if RGB_ALPHA is not None:
                     # Apply predicted mask on input image
                     masked_img = draw_segmentation_masks(
@@ -332,12 +342,9 @@ def main():
                     masked_img = masked_img.detach().cpu().numpy()
                     masked_img = np.asarray(masked_img)
 
-                # Save image
-                utils.save_img(
-                    masked_img,
-                    target_dir=target_dir,
-                    filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png",
-                )
+                    # Save image
+                    new_name = f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png"
+                    utils.save_img(masked_img, target_dir=target_dir, filename=new_name)
 
 
 if __name__ == "__main__":
