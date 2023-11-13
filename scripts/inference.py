@@ -211,8 +211,10 @@ def main():
     RGB_ALPHA = None
 
     img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined"
-    label_dir = ""
+    label_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/stitched_tb_masks_combined"
     target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb_masks_combined"
+
+    transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
     DEVICE = "cuda:0"
     model_name = "tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
@@ -221,10 +223,6 @@ def main():
     perform_save_name = "TrainTest_tipburn_tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.tsv"
 
     # From directory inference
-    # Define transforms
-    transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
-
-    # Load data
     if (PERFORM_FN is not None) and (label_dir is not None):
         dataset = data_setup.LettuceSegDataset(
             img_dir=img_dir,
