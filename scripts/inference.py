@@ -131,7 +131,7 @@ def inference(
     if (labels is not None) and (perform_fn is not None):
         performs = []
         for pred, label in zip(preds, labels):
-            perform = perform_fn(logit_preds, labels)
+            perform = perform_fn(pred, label)
             performs.append(perform)
         result = (result, performs)
 
@@ -250,46 +250,94 @@ def main():
 
     # Make predictions
     for batch in tqdm(loader, desc="Batches"):
+        # If batch contains labels for performance tracking
         if len(batch) == 3:
             input_imgs, labels, filenames = batch
+
+            # Move data and labels to device
             if "cuda" in DEVICE:
                 torch.cuda.set_device(DEVICE)
                 input_imgs.cuda()
                 labels.cuda()
+
+            # Get output from model
+            output_masks = inference(
+                model,
+                input_imgs.float(),
+                labels.float(),
+                perform_fn=utils.binary_jaccard,
+                move_channel=False,
+                output_np=False,
+            )
+            output_masks = output_masks.round().bool()
+            for output_mask, input_img, filename in zip(
+                output_masks, input_imgs, filenames
+            ):
+                # Create target directory to save
+                target_dir_path = Path(target_dir)
+                target_dir_path.mkdir(parents=True, exist_ok=True)
+
+                if RGB_ALPHA is not None:
+                    # Apply predicted mask on input image
+                    masked_img = draw_segmentation_masks(
+                        input_img, ~output_mask, alpha=0.7
+                    )
+                    masked_img = masked_img.detach()
+                    masked_img = F.to_pil_image(masked_img)
+                    masked_img = np.asarray(masked_img)
+                else:
+                    # Output mask as binary image
+                    masked_img = masked_img.detach().cpu().numpy()
+                    masked_img = np.asarray(masked_img)
+
+                # Save image
+                utils.save_img(
+                    masked_img,
+                    target_dir=target_dir,
+                    filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png",
+                )
         else:
             input_imgs, filenames = batch
 
-        output_masks = inference(
-            model,
-            input_imgs.float(),
-            move_channel=False,
-            output_np=False,
-        )
-        output_masks = output_masks.round().bool()
-        for output_mask, input_img, filename in zip(
-            output_masks, input_imgs, filenames
-        ):
-            # Create target directory to save
-            target_dir_path = Path(target_dir)
-            target_dir_path.mkdir(parents=True, exist_ok=True)
+            # Move data to device
+            if "cuda" in DEVICE:
+                torch.cuda.set_device(DEVICE)
+                input_imgs.cuda()
 
-            if RGB_ALPHA is not None:
-                # Apply predicted mask on input image
-                masked_img = draw_segmentation_masks(input_img, ~output_mask, alpha=0.7)
-                masked_img = masked_img.detach()
-                masked_img = F.to_pil_image(masked_img)
-                masked_img = np.asarray(masked_img)
-            else:
-                # Output mask as binary image
-                masked_img = masked_img.detach().cpu().numpy()
-                masked_img = np.asarray(masked_img)
-
-            # Save image
-            utils.save_img(
-                masked_img,
-                target_dir=target_dir,
-                filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png",
+            # Get output from model
+            output_masks = inference(
+                model,
+                input_imgs.float(),
+                move_channel=False,
+                output_np=False,
             )
+            output_masks = output_masks.round().bool()
+            for output_mask, input_img, filename in zip(
+                output_masks, input_imgs, filenames
+            ):
+                # Create target directory to save
+                target_dir_path = Path(target_dir)
+                target_dir_path.mkdir(parents=True, exist_ok=True)
+
+                if RGB_ALPHA is not None:
+                    # Apply predicted mask on input image
+                    masked_img = draw_segmentation_masks(
+                        input_img, ~output_mask, alpha=0.7
+                    )
+                    masked_img = masked_img.detach()
+                    masked_img = F.to_pil_image(masked_img)
+                    masked_img = np.asarray(masked_img)
+                else:
+                    # Output mask as binary image
+                    masked_img = masked_img.detach().cpu().numpy()
+                    masked_img = np.asarray(masked_img)
+
+                # Save image
+                utils.save_img(
+                    masked_img,
+                    target_dir=target_dir,
+                    filename=f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png",
+                )
 
 
 if __name__ == "__main__":
