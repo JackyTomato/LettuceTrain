@@ -50,7 +50,11 @@ def main():
     plant_areas = []
     tb_areas = []
     area_ratios = []
-    names_loop = tqdm(zip(bg_names, tb_names), desc="Area extraction from images")
+    names_loop = tqdm(
+        zip(bg_names, tb_names),
+        desc="Area extraction from images",
+        total=len(bg_names),
+    )
     for bg_name, tb_name in names_loop:
         # Create paths
         bg_path = os.path.join(bg_mask_dir, bg_name)
@@ -83,7 +87,7 @@ def main():
         for name, plant, tb, ratio in zip(tb_names, plant_areas, tb_areas, area_ratios):
             new_line = f"{name}\t{plant}\t{tb}\t{ratio}\n"
             values_tsv.write(new_line)
-    print(f"[INFO] Pixel areas have been saved to {target_path}!")
+    print(f"[INFO] Pixel areas have been saved to {target_path}")
 
 
 if __name__ == "__main__":
