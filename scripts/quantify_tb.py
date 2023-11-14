@@ -49,7 +49,7 @@ def main():
     # Loop through filenames, read images, extract pixel areas and calculate ratio
     plant_areas = []
     tb_areas = []
-
+    area_ratios = []
     for bg_name, tb_name in zip(bg_names, tb_names):
         # Create paths
         bg_path = os.path.join(bg_mask_dir, bg_name)
@@ -64,6 +64,10 @@ def main():
         plant_areas.append(plant_area)
         tb_area = binary2area(tb_img)
         tb_areas.append(tb_area)
+
+        # Calculate ratio
+        area_ratio = tb_area / plant_area
+        area_ratios.append(area_ratio)
 
 
 if __name__ == "__main__":
