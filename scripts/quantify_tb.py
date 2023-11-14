@@ -11,6 +11,7 @@ Also assumes the mask names were saved as .png files.
 # Import statements
 import os
 import numpy as np
+from tqdm import tqdm
 from skimage import io
 from pathlib import Path
 
@@ -45,16 +46,12 @@ def main():
     bg_names = [name for name in bg_names if name.endswith(".png")]
     tb_names = [name for name in tb_names if name.endswith(".png")]
 
-    print(bg_names)
-    print(len(bg_names))
-    print(tb_names)
-    print(len(tb_names))
-
     # Loop through filenames, read images, extract pixel areas and calculate ratios
     plant_areas = []
     tb_areas = []
     area_ratios = []
-    for bg_name, tb_name in zip(bg_names, tb_names):
+    names_loop = tqdm(zip(bg_names, tb_names), desc="Area extraction from images")
+    for bg_name, tb_name in names_loop:
         # Create paths
         bg_path = os.path.join(bg_mask_dir, bg_name)
         tb_path = os.path.join(tb_mask_dir, tb_name)
