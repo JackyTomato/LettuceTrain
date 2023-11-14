@@ -11,7 +11,6 @@ Also assumes the mask names were saved as .png files.
 # Import statements
 import os
 import numpy as np
-import matplotlib.pyplot as plt
 from skimage import io
 from pathlib import Path
 
@@ -35,10 +34,10 @@ def binary2area(img, area_value=1):
 
 def main():
     # Define directories for loading and saving
-    bg_mask_dir = ""
-    tb_mask_dir = ""
-    target_dir = ""
-    values_save_name = ""
+    bg_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg-bin_masks_combined"
+    tb_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb_masks_combined"
+    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn"
+    values_save_name = "UnetMit-b3_bg_UnetMit-b3_tb_areas.tsv"
 
     # Gather filenames, ignore non-.png files
     bg_names = sorted(os.listdir(bg_mask_dir))
@@ -46,7 +45,12 @@ def main():
     bg_names = [name for name in bg_names if name.endswith(".png")]
     tb_names = [name for name in tb_names if name.endswith(".png")]
 
-    # Loop through filenames, read images, extract pixel areas and calculate ratio
+    print(bg_names)
+    print(len(bg_names))
+    print(tb_names)
+    print(len(tb_names))
+
+    # Loop through filenames, read images, extract pixel areas and calculate ratios
     plant_areas = []
     tb_areas = []
     area_ratios = []
@@ -66,7 +70,10 @@ def main():
         tb_areas.append(tb_area)
 
         # Calculate ratio
-        area_ratio = tb_area / plant_area
+        if plant_area != 0:
+            area_ratio = tb_area / plant_area
+        else:
+            area_ratio = None
         area_ratios.append(area_ratio)
 
     # Create target path to save
@@ -79,6 +86,7 @@ def main():
         for name, plant, tb, ratio in zip(tb_names, plant_areas, tb_areas, area_ratios):
             new_line = f"{name}\t{plant}\t{tb}\t{ratio}\n"
             values_tsv.write(new_line)
+    print(f"[INFO] Pixel areas have been saved to {target_path}!")
 
 
 if __name__ == "__main__":
