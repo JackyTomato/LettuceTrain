@@ -13,6 +13,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage import io
+from pathlib import Path
 
 
 # Define pixel area extractor
@@ -36,7 +37,6 @@ def main():
     # Define directories for loading and saving
     bg_mask_dir = ""
     tb_mask_dir = ""
-
     target_dir = ""
     values_save_name = ""
 
@@ -68,6 +68,17 @@ def main():
         # Calculate ratio
         area_ratio = tb_area / plant_area
         area_ratios.append(area_ratio)
+
+    # Create target path to save
+    target_dir_path = Path(target_dir)
+    target_dir_path.mkdir(parents=True, exist_ok=True)
+    target_path = os.path.join(target_dir, values_save_name)
+
+    # Write .tsv file with tipburn mask filename, areas of plant, tipburn and the ratio
+    with open(target_path, "w") as values_tsv:
+        for name, plant, tb, ratio in zip(tb_names, plant_areas, tb_areas, area_ratios):
+            new_line = f"{name}\t{plant}\t{tb}\t{ratio}\n"
+            values_tsv.write(new_line)
 
 
 if __name__ == "__main__":
