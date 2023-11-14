@@ -273,7 +273,7 @@ def main():
                     output_masks, input_imgs, filenames, performs
                 ):
                     # Adjust mask before saving
-                    if RGB_ALPHA is not None:
+                    if RGB_ALPHA:
                         # Apply predicted mask on input image
                         masked_img = draw_segmentation_masks(
                             input_img, ~output_mask, alpha=0.7
@@ -339,7 +339,7 @@ def main():
                 output_masks, input_imgs, filenames
             ):
                 # Adjust mask before saving
-                if RGB_ALPHA is not None:
+                if RGB_ALPHA:
                     # Apply predicted mask on input image
                     masked_img = draw_segmentation_masks(
                         input_img, ~output_mask, alpha=0.7
@@ -353,9 +353,9 @@ def main():
                     masked_img = masked_img.cpu().numpy()
                     masked_img = util.img_as_ubyte(masked_img)
 
-                    # Save image
-                    new_name = f"{filename.split(os.extsep)[0]}{savename_appendix}"
-                    utils.save_img(masked_img, target_dir=target_dir, filename=new_name)
+                # Save image
+                new_name = f"{filename.split(os.extsep)[0]}{savename_appendix}"
+                utils.save_img(masked_img, target_dir=target_dir, filename=new_name)
 
 
 if __name__ == "__main__":
