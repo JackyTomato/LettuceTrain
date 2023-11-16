@@ -25,6 +25,8 @@ class LettuceSegDataset(Dataset):
         img_dir,
         label_dir,
         is_train,
+        fm_dir=None,
+        fvfm_dir=None,
         train_frac=0.75,
         transform=None,
         seed=42,
@@ -40,6 +42,8 @@ class LettuceSegDataset(Dataset):
             img_dir (str): Filepath of directory containing the images.
             label_dir (str): Filepath of directory  containing the segmentation masks.
             is_train (bool): If true, gives train data. If false, gives test data.
+            fm_dir (str, optional): Filepath of directory containing Fm images for channel stacked input.
+            fvfm_dir (str, optional): Filepath of directory containing FvFm images for channel stacked input.
             train_frac (float, optional): Fraction of data that is train. Defaults to 0.75.
             transform (albumentations.Compose, optional): Transformations for data aug. Defaults to None.
             seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
@@ -48,9 +52,13 @@ class LettuceSegDataset(Dataset):
         self.transform = transform
         self.give_name = give_name
 
-        # List all image and mask filenames
+        # List all image, mask filenames and optionally Fm and FvFm filenames
         self.img_names = sorted(os.listdir(img_dir))
         mask_names = sorted(os.listdir(label_dir))
+        if fm_dir is not None:
+            fm_names = sorted(os.listdir(fm_dir))
+        if fvfm_dir is not None:
+            fvfm_names = sorted(os.listdir(fvfm_dir))
 
         # Check if there is an incomplete number of masks
         if len(self.img_names) != len(mask_names):
@@ -59,7 +67,7 @@ class LettuceSegDataset(Dataset):
                 "[INFO] Numbers of images and masks are inequal, cancel if unintended!"
             )
 
-        # Create lists of filepath for images and masks
+        # Create lists of filepaths for images and masks
         if incomplete_masks is False:
             img_paths = []
             mask_paths = []
@@ -68,6 +76,8 @@ class LettuceSegDataset(Dataset):
                 mask_path = os.path.join(label_dir, mask_name)
                 img_paths.append(img_path)
                 mask_paths.append(mask_path)
+
+        # Create lists of filepaths for images and masks when there are not masks for every image
         else:
             img_paths = []
             mask_paths = []
@@ -89,6 +99,18 @@ class LettuceSegDataset(Dataset):
                 elif len(match_ind) == 0:
                     mask_path = raw_name
                 mask_paths.append(mask_path)
+
+        # Also create lists of filepaths for Fm and FvFm if desired
+        if fm_dir is not None:
+            fm_paths = []
+            for fm_name in fm_names:
+                fm_path = os.path.join(fm_dir, fm_name)
+                fm_paths.append(fm_path)
+        if fvfm_dir is not None:
+            fvfm_paths = []
+            for fvfm_name in fvfm_names:
+                fvfm_path = os.path.join(fvfm_dir, fvfm_name)
+                fvfm_paths.append(fvfm_path)
 
         # Split into train and test sets if desired
         if train_frac < 1:
