@@ -38,6 +38,9 @@ class LettuceSegDataset(Dataset):
         are constructed in such a way that sorted() will sort the filenames in the same way.
         Otherwise images and masks will be mismatched when loading the data.
 
+        Fm and FvFm images can be included as additional input. The Fm and FvFm are stacked
+        with the RGB images as additional channels.
+
         Args:
             img_dir (str): Filepath of directory containing the images.
             label_dir (str): Filepath of directory  containing the segmentation masks.
@@ -114,27 +117,100 @@ class LettuceSegDataset(Dataset):
 
         # Split into train and test sets if desired
         if train_frac < 1:
-            img_train, img_test, mask_train, mask_test = train_test_split(
-                img_paths, mask_paths, train_size=train_frac, random_state=seed
-            )
+            if (fm_dir is None) and (fvfm_dir is None):
+                img_split, mask_split = train_test_split(
+                    img_paths,
+                    mask_paths,
+                    train_size=train_frac,
+                    random_state=seed,
+                )
 
-            # Give train or test data as requested
-            if is_train:
-                self.img_paths = img_train
-                self.mask_paths = mask_train
-            else:
-                self.img_paths = img_test
-                self.mask_paths = mask_test
+                # Give train or test data as requested
+                if is_train:
+                    self.img_paths = img_split[0]
+                    self.mask_paths = mask_split[0]
+                else:
+                    self.img_paths = img_split[1]
+                    self.mask_paths = mask_split[1]
+            elif (fm_dir is not None) and (fvfm_dir is None):
+                img_split, fm_split, mask_split = train_test_split(
+                    img_paths,
+                    fm_paths,
+                    mask_paths,
+                    train_size=train_frac,
+                    random_state=seed,
+                )
+
+                # Give train or test data as requested
+                if is_train:
+                    self.img_paths = img_split[0]
+                    self.fm_paths = fm_split[0]
+                    self.mask_paths = mask_split[0]
+                else:
+                    self.img_paths = img_split[1]
+                    self.fm_paths = fm_split[1]
+                    self.mask_paths = mask_split[1]
+            elif (fm_dir is None) and (fvfm_dir is not None):
+                img_split, fvfm_split, mask_split = train_test_split(
+                    img_paths,
+                    fvfm_paths,
+                    mask_paths,
+                    train_size=train_frac,
+                    random_state=seed,
+                )
+
+                # Give train or test data as requested
+                if is_train:
+                    self.img_paths = img_split[0]
+                    self.fvfm_paths = fvfm_split[0]
+                    self.mask_paths = mask_split[0]
+                else:
+                    self.img_paths = img_split[1]
+                    self.fvfm_paths = fvfm_split[1]
+                    self.mask_paths = mask_split[1]
+            elif (fm_dir is not None) and (fvfm_dir is not None):
+                img_split, fvfm_split, mask_split = train_test_split(
+                    img_paths,
+                    fvfm_paths,
+                    mask_paths,
+                    train_size=train_frac,
+                    random_state=seed,
+                )
+
+                # Give train or test data as requested
+                if is_train:
+                    self.img_paths = img_split[0]
+                    self.fm_paths = fm_split[0]
+                    self.fvfm_paths = fvfm_split[0]
+                    self.mask_paths = mask_split[0]
+                else:
+                    self.img_paths = img_split[1]
+                    self.fm_paths = fm_split[1]
+                    self.fvfm_paths = fvfm_split[1]
+                    self.mask_paths = mask_split[1]
         else:
             self.img_paths = img_paths
             self.mask_paths = mask_paths
+            if fm_dir is not None:
+                self.fm_paths = fm_paths
+            if fvfm_dir is not None:
+                self.fvfm_paths = fvfm_paths
 
     def __len__(self):
         return len(self.img_paths)
 
     def __getitem__(self, index):
-        # Retrieve image and mask, should be np.array for albumentations.transforms
+        # Retrieve image, should be np.array for albumentations.transforms
         img = np.array(Image.open(self.img_paths[index]))
+
+        # Also retrieve Fm and FvFm images if desired
+        if self.fm_paths in locals():
+            fm = np.array(Image.open(self.fm_paths[index]))
+            fm = fm / fm.max()  # normalize Fm values as they are large
+        if self.fvfm_paths in locals():
+            fvfm = np.array(Image.open(self.fvfm_paths[index]))
+
+        # Retrieve mask, mask could be .json or an image format
         size = img.shape[:2]
         if self.mask_paths[index].endswith(".json"):
             mask = utils.binary_poly2px(self.mask_paths[index], custom_size=size)
@@ -147,18 +223,37 @@ class LettuceSegDataset(Dataset):
         if 255.0 in mask:
             mask[mask == 255.0] = 1.0
 
-        # Apply data augmentation transforms to image and mask
+        # Apply data augmentation transforms to image, mask and optionally Fm and FvFm
         if self.transform is not None:
-            augmentations = self.transform(image=img, mask=mask)
+            grayscales = [mask]
+            if fm:
+                grayscales.append(fm)
+            if fvfm:
+                grayscales.append(fvfm)
+            augmentations = self.transform(image=img, mask=grayscales)
             img = augmentations["image"]
-            mask = augmentations["mask"]
+            if (not fm) and (not fvfm):
+                mask = augmentations["mask"]
+            elif (fm) and (not fvfm):
+                mask, fm = augmentations["mask"]
+            elif (not fm) and (fvfm):
+                mask, fvfm = augmentations["mask"]
+            elif (fm) and (fvfm):
+                mask, fm, fvfm = augmentations["mask"]
 
+        # Compile resulting images
+        if fm:
+            mask = np.concatenate([img, fm], axis=2)
+        if fvfm:
+            mask = np.concatenate([img, fvfm], axis=2)
+        result = (img, mask)
+        
         # Also provide image name if desired
         if self.give_name:
             img_name = self.img_names[index].split(os.extsep)[0]
-            return img, mask, img_name
-        else:
-            return img, mask
+            result.append(img_name)
+
+        return result
 
 
 # Define data loaders for training and testing
