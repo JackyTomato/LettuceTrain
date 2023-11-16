@@ -118,7 +118,7 @@ class LettuceSegDataset(Dataset):
         # Split into train and test sets if desired
         if train_frac < 1:
             if (fm_dir is None) and (fvfm_dir is None):
-                img_split, mask_split = train_test_split(
+                split = train_test_split(
                     img_paths,
                     mask_paths,
                     train_size=train_frac,
@@ -127,13 +127,13 @@ class LettuceSegDataset(Dataset):
 
                 # Give train or test data as requested
                 if is_train:
-                    self.img_paths = img_split[0]
-                    self.mask_paths = mask_split[0]
+                    self.img_paths = split[0]
+                    self.mask_paths = split[2]
                 else:
-                    self.img_paths = img_split[1]
-                    self.mask_paths = mask_split[1]
+                    self.img_paths = split[1]
+                    self.mask_paths = split[3]
             elif (fm_dir is not None) and (fvfm_dir is None):
-                img_split, fm_split, mask_split = train_test_split(
+                split = train_test_split(
                     img_paths,
                     fm_paths,
                     mask_paths,
@@ -143,15 +143,15 @@ class LettuceSegDataset(Dataset):
 
                 # Give train or test data as requested
                 if is_train:
-                    self.img_paths = img_split[0]
-                    self.fm_paths = fm_split[0]
-                    self.mask_paths = mask_split[0]
+                    self.img_paths = split[0]
+                    self.fm_paths = split[2]
+                    self.mask_paths = split[4]
                 else:
-                    self.img_paths = img_split[1]
-                    self.fm_paths = fm_split[1]
-                    self.mask_paths = mask_split[1]
+                    self.img_paths = split[1]
+                    self.fm_paths = split[3]
+                    self.mask_paths = split[5]
             elif (fm_dir is None) and (fvfm_dir is not None):
-                img_split, fvfm_split, mask_split = train_test_split(
+                split = train_test_split(
                     img_paths,
                     fvfm_paths,
                     mask_paths,
@@ -161,16 +161,17 @@ class LettuceSegDataset(Dataset):
 
                 # Give train or test data as requested
                 if is_train:
-                    self.img_paths = img_split[0]
-                    self.fvfm_paths = fvfm_split[0]
-                    self.mask_paths = mask_split[0]
+                    self.img_paths = split[0]
+                    self.fvfm_paths = split[2]
+                    self.mask_paths = split[4]
                 else:
-                    self.img_paths = img_split[1]
-                    self.fvfm_paths = fvfm_split[1]
-                    self.mask_paths = mask_split[1]
+                    self.img_paths = split[1]
+                    self.fvfm_paths = split[3]
+                    self.mask_paths = split[5]
             elif (fm_dir is not None) and (fvfm_dir is not None):
-                img_split, fvfm_split, mask_split = train_test_split(
+                split = train_test_split(
                     img_paths,
+                    fm_paths,
                     fvfm_paths,
                     mask_paths,
                     train_size=train_frac,
@@ -179,15 +180,15 @@ class LettuceSegDataset(Dataset):
 
                 # Give train or test data as requested
                 if is_train:
-                    self.img_paths = img_split[0]
-                    self.fm_paths = fm_split[0]
-                    self.fvfm_paths = fvfm_split[0]
-                    self.mask_paths = mask_split[0]
+                    self.img_paths = split[0]
+                    self.fm_paths = split[2]
+                    self.fvfm_paths = split[4]
+                    self.mask_paths = split[6]
                 else:
-                    self.img_paths = img_split[1]
-                    self.fm_paths = fm_split[1]
-                    self.fvfm_paths = fvfm_split[1]
-                    self.mask_paths = mask_split[1]
+                    self.img_paths = split[1]
+                    self.fm_paths = split[3]
+                    self.fvfm_paths = split[5]
+                    self.mask_paths = split[7]
         else:
             self.img_paths = img_paths
             self.mask_paths = mask_paths
@@ -204,10 +205,10 @@ class LettuceSegDataset(Dataset):
         img = np.array(Image.open(self.img_paths[index]))
 
         # Also retrieve Fm and FvFm images if desired
-        if self.fm_paths in locals():
+        if hasattr(self, "fm_paths"):
             fm = np.array(Image.open(self.fm_paths[index]))
-            fm = fm / fm.max()  # normalize Fm values as they are large
-        if self.fvfm_paths in locals():
+            fm = fm / fm.max() * 255  # normalize Fm values as they are large
+        if hasattr(self, "fvfm_paths"):
             fvfm = np.array(Image.open(self.fvfm_paths[index]))
 
         # Retrieve mask, mask could be .json or an image format
@@ -226,34 +227,76 @@ class LettuceSegDataset(Dataset):
         # Apply data augmentation transforms to image, mask and optionally Fm and FvFm
         if self.transform is not None:
             grayscales = [mask]
-            if fm:
+            if hasattr(self, "fm_paths"):
                 grayscales.append(fm)
-            if fvfm:
+            if hasattr(self, "fvfm_paths"):
                 grayscales.append(fvfm)
-            augmentations = self.transform(image=img, mask=grayscales)
+            augmentations = self.transform(image=img, masks=grayscales)
             img = augmentations["image"]
-            if (not fm) and (not fvfm):
-                mask = augmentations["mask"]
-            elif (fm) and (not fvfm):
-                mask, fm = augmentations["mask"]
-            elif (not fm) and (fvfm):
-                mask, fvfm = augmentations["mask"]
-            elif (fm) and (fvfm):
-                mask, fm, fvfm = augmentations["mask"]
+            if (not hasattr(self, "fm_paths")) and (not hasattr(self, "fvfm_paths")):
+                mask = augmentations["masks"]
+            elif (hasattr(self, "fm_paths")) and (not hasattr(self, "fvfm_paths")):
+                mask, fm = augmentations["masks"]
+            elif (not hasattr(self, "fm_paths")) and (hasattr(self, "fvfm_paths")):
+                mask, fvfm = augmentations["masks"]
+            elif (hasattr(self, "fm_paths")) and (hasattr(self, "fvfm_paths")):
+                mask, fm, fvfm = augmentations["masks"]
 
         # Compile resulting images
-        if fm:
-            mask = np.concatenate([img, fm], axis=2)
-        if fvfm:
-            mask = np.concatenate([img, fvfm], axis=2)
+        if hasattr(self, "fm_paths"):
+            img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
+        if hasattr(self, "fvfm_paths"):
+            img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
         result = (img, mask)
-        
+
         # Also provide image name if desired
         if self.give_name:
             img_name = self.img_names[index].split(os.extsep)[0]
             result.append(img_name)
 
         return result
+
+
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+import cv2
+
+transforms = A.Compose(
+    [
+        A.Resize(height=480, width=480),
+        A.Rotate(limit=1100, border_mode=cv2.BORDER_CONSTANT, p=0.5),
+        A.HorizontalFlip(p=0.5),
+        A.VerticalFlip(p=0.5),
+        A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
+        A.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05, p=0.5),
+        ToTensorV2(),
+    ]
+)
+
+dataset = LettuceSegDataset(
+    img_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined",
+    label_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/stitched_tb_masks_combined",
+    is_train=True,
+    fm_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fm_crops_combined",
+    fvfm_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fvfm_crops_combined",
+    train_frac=0.75,
+    transform=transforms,
+    seed=42,
+    give_name=False,
+)
+
+img, mask = dataset[0]
+
+import matplotlib.pyplot as plt
+
+fig, axes = plt.subplots(1, 4)
+axes[0].imshow(img[0:3])
+axes[1].imshow(img[3])
+axes[2].imshow(img[4])
+axes[3].imshow(mask)
+plt.show()
+
+# TODO: Apply RGB masks to Fluorescence images in folder
 
 
 # Define data loaders for training and testing
