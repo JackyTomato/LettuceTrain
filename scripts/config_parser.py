@@ -37,6 +37,7 @@ SEED = _config_dict["SEED"]
 
 # Setup device settings
 DEVICE = _config_dict["DEVICE"]
+MULTI_GPU = eval(_config_dict["MULTI_GPU"])
 NUM_WORKERS = _config_dict["NUM_WORKERS"]
 PIN_MEMORY = eval(_config_dict["PIN_MEMORY"])
 

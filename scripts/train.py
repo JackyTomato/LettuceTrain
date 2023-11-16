@@ -123,7 +123,9 @@ def main():
         decoder_attention=cp.DECODER_ATTENTION,
         encoder_freeze=cp.ENCODER_FREEZE,
     )
-    model = nn.DataParallel(model).to(cp.DEVICE)
+    if cp.MULTI_GPU:
+        model = nn.DataParallel(model)
+    model = model.to(cp.DEVICE)
     print("[INFO] Model initialized!")
 
     # Start training with help from engine.py
