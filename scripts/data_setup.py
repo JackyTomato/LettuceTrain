@@ -4,6 +4,7 @@ Functionality for creating lettuce dataset as PyTorch Dataset
 and loading thre train & test datasets.
 
 TODO:
+    - Apply RGB masks to Fluorescence images in folder
 """
 # Import statements
 import os
@@ -296,7 +297,7 @@ axes[2].imshow(img[4])
 axes[3].imshow(mask)
 plt.show()
 
-# TODO: Apply RGB masks to Fluorescence images in folder
+# Test after applying masks to fluorescence images
 
 
 # Define data loaders for training and testing
