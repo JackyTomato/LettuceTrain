@@ -20,6 +20,7 @@ model and save settings.
 Example of config.json with brief explanations as comments:
     "SEED": 42, # int, random seed used for reproducbility
     "DEVICE": "cuda", # str, device to train "cuda" (GPU) or "cpu"
+    "MULTI_GPU": "True", # bool, if True splits data over multiple GPU for training
     "NUM_WORKERS": 4, # int, number of worker processes for data loading
     "PIN_MEMORY": "True", # bool, if True speeds up data transfer from CPU to GPU
     "LEARNING_RATE": # 1e-2, float, learning rate
