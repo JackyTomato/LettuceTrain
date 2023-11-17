@@ -282,6 +282,7 @@ def get_loaders(
     num_workers,
     fm_dir=None,
     fvfm_dir=None,
+    fusion=None,
     train_frac=0.75,
     pin_memory=True,
     seed=42,
@@ -298,6 +299,7 @@ def get_loaders(
         num_workers (int): Number of worker processes for data loading.
         fm_dir (str, optional): Filepath of directory containing Fm images for channel stacked input.
         fvfm_dir (str, optional): Filepath of directory containing FvFm images for channel stacked input.
+        fusion (str, optional): Fusion of RGB with fluor data: early, intermediate, or late. Defaults to None.
         train_frac (float, optional): Fraction of data to be used for training. Defaults to 0.75.
         pin_memory (bool, optional): Speeds up data transfer from CPU to GPU. Defaults to True.
         seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
@@ -312,6 +314,7 @@ def get_loaders(
         train_frac=train_frac,
         fm_dir=fm_dir,
         fvfm_dir=fvfm_dir,
+        fusion=fusion,
         is_train=True,
         transform=train_augs,
         seed=seed,
@@ -322,6 +325,7 @@ def get_loaders(
         train_frac=train_frac,
         fm_dir=fm_dir,
         fvfm_dir=fvfm_dir,
+        fusion=fusion,
         is_train=False,
         transform=test_augs,
         seed=seed,

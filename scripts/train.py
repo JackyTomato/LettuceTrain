@@ -106,6 +106,7 @@ def main():
         label_dir=cp.LABEL_DIR,
         fm_dir=cp.FM_DIR,
         fvfm_dir=cp.FVFM_DIR,
+        fusion=cp.FUSION,
         train_frac=cp.TRAIN_FRAC,
         train_augs=cp.TRAIN_TRANSFORMS,
         test_augs=cp.TEST_TRANSFORMS,
