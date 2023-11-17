@@ -276,6 +276,8 @@ def get_loaders(
     test_augs,
     batch_size,
     num_workers,
+    fm_dir=None,
+    fvfm_dir=None,
     train_frac=0.75,
     pin_memory=True,
     seed=42,
@@ -290,6 +292,8 @@ def get_loaders(
         test_augs (albumentations.Compose/transforms.Compose): Albumentations or PyTorch transforms for test.
         batch_size (int): Number of samples in each batch.
         num_workers (int): Number of worker processes for data loading.
+        fm_dir (str, optional): Filepath of directory containing Fm images for channel stacked input.
+        fvfm_dir (str, optional): Filepath of directory containing FvFm images for channel stacked input.
         train_frac (float, optional): Fraction of data to be used for training. Defaults to 0.75.
         pin_memory (bool, optional): Speeds up data transfer from CPU to GPU. Defaults to True.
         seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
@@ -302,6 +306,8 @@ def get_loaders(
         img_dir=img_dir,
         label_dir=label_dir,
         train_frac=train_frac,
+        fm_dir=fm_dir,
+        fvfm_dir=fvfm_dir,
         is_train=True,
         transform=train_augs,
         seed=seed,
@@ -310,6 +316,8 @@ def get_loaders(
         img_dir=img_dir,
         label_dir=label_dir,
         train_frac=train_frac,
+        fm_dir=fm_dir,
+        fvfm_dir=fvfm_dir,
         is_train=False,
         transform=test_augs,
         seed=seed,
