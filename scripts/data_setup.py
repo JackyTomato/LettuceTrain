@@ -14,6 +14,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets
 from PIL import Image
 from sklearn.model_selection import train_test_split
+from skimage.transform import resize
 
 # Import supporting modules
 import utils
@@ -202,15 +203,23 @@ class LettuceSegDataset(Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, index):
+        # Check if Fm and FvFm should be included
+        fm_exists = hasattr(self, "fm_paths")
+        fvfm_exists = hasattr(self, "fvfm_paths")
+
         # Retrieve image, should be np.array for albumentations.transforms
         img = np.array(Image.open(self.img_paths[index]))
 
         # Also retrieve Fm and FvFm images if desired
-        if hasattr(self, "fm_paths"):
+        if fm_exists:
             fm = np.array(Image.open(self.fm_paths[index]))
             fm = fm / fm.max() * 255  # normalize Fm values as they are large
-        if hasattr(self, "fvfm_paths"):
+            img_fit = resize(img, (fm.shape[0], fm.shape[1], 3), anti_aliasing=True)
+            fm = fm * (img_fit.sum(axis=2) > 0)  # apply RGB background mask
+        if fvfm_exists:
             fvfm = np.array(Image.open(self.fvfm_paths[index]))
+            img_fit = resize(img, (fvfm.shape[0], fvfm.shape[1], 3), anti_aliasing=True)
+            fvfm = fvfm * (img_fit.sum(axis=2) > 0)  # apply RGB background mask
 
         # Retrieve mask, mask could be .json or an image format
         size = img.shape[:2]
@@ -228,31 +237,25 @@ class LettuceSegDataset(Dataset):
         # Apply data augmentation transforms to image, mask and optionally Fm and FvFm
         if self.transform is not None:
             grayscales = [mask]
-            if hasattr(self, "fm_paths"):
+            if fm_exists:
                 grayscales.append(fm)
-            if hasattr(self, "fvfm_paths"):
+            if fvfm_exists:
                 grayscales.append(fvfm)
             augmentations = self.transform(image=img, masks=grayscales)
             img = augmentations["image"]
-            if (not hasattr(self, "fm_paths")) and (not hasattr(self, "fvfm_paths")):
+            if (not fm_exists) and (not fvfm_exists):
                 mask = augmentations["masks"]
-            elif (hasattr(self, "fm_paths")) and (not hasattr(self, "fvfm_paths")):
+            elif (fm_exists) and (not fvfm_exists):
                 mask, fm = augmentations["masks"]
-            elif (not hasattr(self, "fm_paths")) and (hasattr(self, "fvfm_paths")):
+            elif (not fm_exists) and (fvfm_exists):
                 mask, fvfm = augmentations["masks"]
-            elif (hasattr(self, "fm_paths")) and (hasattr(self, "fvfm_paths")):
+            elif (fm_exists) and (fvfm_exists):
                 mask, fm, fvfm = augmentations["masks"]
 
-        # Apply background mask from RGB to Fm and FvFm
-        if hasattr(self, "fm_paths"):
-            fm = fm * (img.sum(dim=0) > 0)
-        if hasattr(self, "fvfm_paths"):
-            fvfm = fvfm * (img.sum(dim=0) > 0)
-
         # Compile resulting images
-        if hasattr(self, "fm_paths"):
+        if fm_exists:
             img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
-        if hasattr(self, "fvfm_paths"):
+        if fvfm_exists:
             img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
         result = (img, mask)
 
@@ -262,48 +265,6 @@ class LettuceSegDataset(Dataset):
             result.append(img_name)
 
         return result
-
-
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
-import cv2
-
-transforms = A.Compose(
-    [
-        A.Resize(height=480, width=480),
-        A.Rotate(limit=1100, border_mode=cv2.BORDER_CONSTANT, p=0.5),
-        A.HorizontalFlip(p=0.5),
-        A.VerticalFlip(p=0.5),
-        A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
-        A.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05, p=0.5),
-        ToTensorV2(),
-    ]
-)
-
-dataset = LettuceSegDataset(
-    img_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined",
-    label_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/stitched_tb_masks_combined",
-    is_train=True,
-    fm_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fm_crops_combined",
-    fvfm_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fvfm_crops_combined",
-    train_frac=0.75,
-    transform=transforms,
-    seed=42,
-    give_name=False,
-)
-
-img, mask = dataset[0]
-
-import matplotlib.pyplot as plt
-
-fig, axes = plt.subplots(1, 4, sharex=True, sharey=True)
-axes[0].imshow(np.moveaxis(img[:3], 0, 2).astype(np.uint8))
-axes[1].imshow(img[3])
-axes[2].imshow(img[4])
-axes[3].imshow(mask)
-plt.show()
-
-# Test after applying masks to fluorescence images
 
 
 # Define data loaders for training and testing
