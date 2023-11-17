@@ -104,6 +104,8 @@ def main():
         dataset=cp.DATASET,
         img_dir=cp.IMG_DIR,
         label_dir=cp.LABEL_DIR,
+        fm_dir=cp.FM_DIR,
+        fvfm_dir=cp.FVFM_DIR,
         train_frac=cp.TRAIN_FRAC,
         train_augs=cp.TRAIN_TRANSFORMS,
         test_augs=cp.TEST_TRANSFORMS,

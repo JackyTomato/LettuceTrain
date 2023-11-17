@@ -53,6 +53,12 @@ PERFORMANCE_FN = eval(_config_dict["PERFORMANCE_FN"])
 DATASET = eval(_config_dict["DATA_CLASS"])
 IMG_DIR = _config_dict["IMG_DIR"]
 LABEL_DIR = _config_dict["LABEL_DIR"]
+FM_DIR = _config_dict["FM_DIR"]
+if FM_DIR == "None":
+    FM_DIR = eval(FM_DIR)  # In case of no Fm
+FVFM_DIR = _config_dict["FVFM_DIR"]
+if FVFM_DIR == "None":
+    FVFM_DIR = eval(FVFM_DIR)  # In case of no FvFm
 TRAIN_FRAC = _config_dict["TRAIN_FRAC"]
 TRAIN_TRANSFORMS = A.Compose([eval(_tf) for _tf in _config_dict["TRAIN_TRANSFORMS"]])
 TEST_TRANSFORMS = A.Compose([eval(_tf) for _tf in _config_dict["TEST_TRANSFORMS"]])
