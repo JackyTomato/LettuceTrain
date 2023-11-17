@@ -243,6 +243,12 @@ class LettuceSegDataset(Dataset):
             elif (hasattr(self, "fm_paths")) and (hasattr(self, "fvfm_paths")):
                 mask, fm, fvfm = augmentations["masks"]
 
+        # Apply background mask from RGB to Fm and FvFm
+        if hasattr(self, "fm_paths"):
+            fm = fm * (img.sum(dim=0) > 0)
+        if hasattr(self, "fvfm_paths"):
+            fvfm = fvfm * (img.sum(dim=0) > 0)
+
         # Compile resulting images
         if hasattr(self, "fm_paths"):
             img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
@@ -290,8 +296,8 @@ img, mask = dataset[0]
 
 import matplotlib.pyplot as plt
 
-fig, axes = plt.subplots(1, 4)
-axes[0].imshow(img[0:3])
+fig, axes = plt.subplots(1, 4, sharex=True, sharey=True)
+axes[0].imshow(np.moveaxis(img[:3], 0, 2).astype(np.uint8))
 axes[1].imshow(img[3])
 axes[2].imshow(img[4])
 axes[3].imshow(mask)
