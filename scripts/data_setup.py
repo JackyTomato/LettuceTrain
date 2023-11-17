@@ -4,7 +4,7 @@ Functionality for creating lettuce dataset as PyTorch Dataset
 and loading thre train & test datasets.
 
 TODO:
-    - Apply RGB masks to Fluorescence images in folder
+    - Implement medium fusion
 """
 # Import statements
 import os
@@ -27,6 +27,7 @@ class LettuceSegDataset(Dataset):
         img_dir,
         label_dir,
         is_train,
+        fusion=None,
         fm_dir=None,
         fvfm_dir=None,
         train_frac=0.75,
@@ -47,13 +48,15 @@ class LettuceSegDataset(Dataset):
             img_dir (str): Filepath of directory containing the images.
             label_dir (str): Filepath of directory  containing the segmentation masks.
             is_train (bool): If true, gives train data. If false, gives test data.
-            fm_dir (str, optional): Filepath of directory containing Fm images for channel stacked input.
-            fvfm_dir (str, optional): Filepath of directory containing FvFm images for channel stacked input.
+            fusion (str, optional): Fusion of RGB with fluor data: early, intermediate, or late. Defaults to None.
+            fm_dir (str, optional): Filepath of directory containing Fm images for fusion. Defaults to None.
+            fvfm_dir (str, optional): Filepath of directory containing FvFm images for fusion. Defaults to None.
             train_frac (float, optional): Fraction of data that is train. Defaults to 0.75.
             transform (albumentations.Compose, optional): Transformations for data aug. Defaults to None.
             seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
             give_name (bool, optional): If True, dataset also provides image name.
         """
+        self.fusion = fusion
         self.transform = transform
         self.give_name = give_name
 
@@ -253,11 +256,12 @@ class LettuceSegDataset(Dataset):
                 mask, fm, fvfm = augmentations["masks"]
 
         # Compile resulting images
-        if fm_exists:
-            img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
-        if fvfm_exists:
-            img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
-        result = (img, mask)
+        if self.fusion == "early":
+            if fm_exists:
+                img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
+            if fvfm_exists:
+                img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
+            result = (img, mask)
 
         # Also provide image name if desired
         if self.give_name:

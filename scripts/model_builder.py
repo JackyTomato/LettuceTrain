@@ -3,9 +3,7 @@
 Functionality for building models as nn.Module class.
 
 TODO:
-    - Provide torchvision support in Segmenter
-    - Implement dict with **args instead of multiple if else statements
-    - Think about what backbones to use for semantic segmentation
+    - Implement medium fusion
 """
 # Import statements
 import torch
