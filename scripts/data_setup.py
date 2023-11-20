@@ -27,7 +27,6 @@ class LettuceSegDataset(Dataset):
         img_dir,
         label_dir,
         is_train,
-        fusion=None,
         fm_dir=None,
         fvfm_dir=None,
         train_frac=0.75,
@@ -48,7 +47,6 @@ class LettuceSegDataset(Dataset):
             img_dir (str): Filepath of directory containing the images.
             label_dir (str): Filepath of directory  containing the segmentation masks.
             is_train (bool): If true, gives train data. If false, gives test data.
-            fusion (str, optional): Fusion of RGB with fluor data: early, intermediate, or late. Defaults to None.
             fm_dir (str, optional): Filepath of directory containing Fm images for fusion. Defaults to None.
             fvfm_dir (str, optional): Filepath of directory containing FvFm images for fusion. Defaults to None.
             train_frac (float, optional): Fraction of data that is train. Defaults to 0.75.
@@ -256,18 +254,11 @@ class LettuceSegDataset(Dataset):
                 mask, fm, fvfm = augmentations["masks"]
 
         # Compile resulting images, in a way suitable for fusion if desired
-        result = [img]
-        if self.fusion == "early":
-            if fm_exists:
-                img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
-            if fvfm_exists:
-                img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
-        if (self.fusion == "intermediate") or (self.fusion == "late"):
-            if fm_exists:
-                result.append(fm[np.newaxis, :, :])
-            if fvfm_exists:
-                result.append(fvfm[np.newaxis, :, :])
-        result.append(mask)
+        if fm_exists:
+            img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
+        if fvfm_exists:
+            img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
+        result = (img, mask)
 
         # Also provide image name if desired
         if self.give_name:
@@ -288,7 +279,6 @@ def get_loaders(
     num_workers,
     fm_dir=None,
     fvfm_dir=None,
-    fusion=None,
     train_frac=0.75,
     pin_memory=True,
     seed=42,
@@ -305,7 +295,6 @@ def get_loaders(
         num_workers (int): Number of worker processes for data loading.
         fm_dir (str, optional): Filepath of directory containing Fm images for channel stacked input.
         fvfm_dir (str, optional): Filepath of directory containing FvFm images for channel stacked input.
-        fusion (str, optional): Fusion of RGB with fluor data: early, intermediate, or late. Defaults to None.
         train_frac (float, optional): Fraction of data to be used for training. Defaults to 0.75.
         pin_memory (bool, optional): Speeds up data transfer from CPU to GPU. Defaults to True.
         seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
@@ -320,7 +309,6 @@ def get_loaders(
         train_frac=train_frac,
         fm_dir=fm_dir,
         fvfm_dir=fvfm_dir,
-        fusion=fusion,
         is_train=True,
         transform=train_augs,
         seed=seed,
@@ -331,7 +319,6 @@ def get_loaders(
         train_frac=train_frac,
         fm_dir=fm_dir,
         fvfm_dir=fvfm_dir,
-        fusion=fusion,
         is_train=False,
         transform=test_augs,
         seed=seed,
