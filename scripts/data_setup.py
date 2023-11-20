@@ -54,7 +54,6 @@ class LettuceSegDataset(Dataset):
             seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
             give_name (bool, optional): If True, dataset also provides image name.
         """
-        self.fusion = fusion
         self.transform = transform
         self.give_name = give_name
 
