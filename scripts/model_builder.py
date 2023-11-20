@@ -3,6 +3,7 @@
 Functionality for building models as nn.Module class.
 
 TODO:
+    = Implemented intermediate fusion support for mix transformers
     - Implement late fusion
 """
 # Import statements
