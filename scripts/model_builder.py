@@ -3,7 +3,7 @@
 Functionality for building models as nn.Module class.
 
 TODO:
-    - Implement medium fusion
+    - Implement late fusion
 """
 # Import statements
 import torch
