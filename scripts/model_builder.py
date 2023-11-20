@@ -11,6 +11,7 @@ import torch.nn as nn
 import torchvision
 import segmentation_models_pytorch as smp
 import re
+from copy import deepcopy
 
 
 # Define nn.Module class for model
@@ -24,6 +25,9 @@ class Segmenter(nn.Module):
         n_classes,
         decoder_attention,
         encoder_freeze,
+        fusion=None,
+        n_channels_med1=3,
+        n_channels_med2=2,
     ):
         """Creates a semantic segmentation model as PyTorch nn.Module class.
 
@@ -35,6 +39,13 @@ class Segmenter(nn.Module):
         Only supports the following torchvision models:
             -
 
+        Intermediate fusion is performed by copying the encoder, feeding the input of different
+        modalities in the different encoders and concatenating the resulting feature maps before
+        the decoder.
+        n_channels_med1 and n_channels_med2 are only used with intermediate fusion. They are the input
+        channels of the first and second encoder, respectively.
+        n_channels should always be equal to or larger than both n_channels_med1 and n_channels_med2.
+
         Args:
             model_name (str): Name of segmentation model as in smp or torchvision.models.
             encoder_name (str): Name of encoder for segmentation mdoel as in smp.
@@ -43,8 +54,14 @@ class Segmenter(nn.Module):
             n_classes (int): Number of output classes for segmentation.
             decoder_attention (str): Attention type for decoder. Available for Unet: None or "scse".
             encoder_freeze (bool): If true, freezes parameters of the encoder.
+            fusion (str, optional): Fusion of RGB with fluor data: early, intermediate, or late. Defaults to None.
+            n_channels_med1(int, optional:) Number of input channels for first encoder in intermediate fusion. Defaults to 3.
+            n_channels_med2(int, optional:) Number of input channels for second encoder in intermediate fusion. Defaults to 2.
         """
         super(Segmenter, self).__init__()
+        self.fusion = fusion
+        self.n_channels_med1 = n_channels_med1
+        self.n_channels_med2 = n_channels_med2
 
         # Set backbone, allow for different models and pretraining
         # Use backbone from segmentation models pytorch (smp)
@@ -72,16 +89,108 @@ class Segmenter(nn.Module):
             model_call = f"{model_call}({args_call})"
             self.model = eval(model_call)
 
+            # Change network architecture for intermediate or late fusion
+            if self.fusion == "intermediate":
+                if not encoder_name.startswith("mit"):
+                    # Extract encoder and deepcopy encoder
+                    self.encoder1 = self.model.encoder
+                    self.encoder2 = deepcopy(self.encoder1)
+
+                    # Tweak number of channels of encoders if not correct already
+                    if self.encoder1.conv1.weight.shape[1] != self.n_channels_med1:
+                        self.encoder1.conv1.weight = nn.Parameter(
+                            self.encoder1.conv1.weight[:, : self.n_channels_med1, :, :]
+                        )
+                    if self.encoder2.conv1.weight.shape[1] != self.n_channels_med2:
+                        self.encoder2.conv1.weight = nn.Parameter(
+                            self.encoder2.conv1.weight[:, : self.n_channels_med2, :, :]
+                        )
+
+                # Squeeze-and-excitation block to merge encoders with feature recalibration
+                layers_encoder1 = []
+                for module in self.encoder1.modules():
+                    if isinstance(module, nn.Conv2d):
+                        layers_encoder1.append(module)
+                last_n_encoder1 = layers_encoder1[-1].out_channels
+
+                se_channels = last_n_encoder1 * 2
+                self.se = torchvision.ops.SqueezeExcitation(
+                    input_channels=se_channels, squeeze_channels=int(se_channels / 16)
+                )
+
+                # Conv layer with batch normalization and ReLU to reduce number of channels
+                self.conv_halver = nn.Sequential(
+                    nn.Conv2d(
+                        se_channels, last_n_encoder1, kernel_size=(1, 1), bias=False
+                    ),
+                    nn.BatchNorm2d(last_n_encoder1),
+                    nn.ReLU(inplace=True),
+                )
+
+                # Separate decoder and segmentation head from encoders
+                self.decoder = self.model.decoder
+                self.seghead = self.model.segmentation_head
+
             # Freeze weights in encoder if desired
-            for param in self.model.encoder.parameters():
-                param.requires_grad = not encoder_freeze
+            if (self.fusion == None) or (self.fusion == "early"):
+                for param in self.model.encoder.parameters():
+                    param.requires_grad = not encoder_freeze
+            if (self.fusion == "intermediate") or (self.fusion == "late"):
+                for param in self.encoder1.parameters():
+                    param.requires_grad = not encoder_freeze
+                for param in self.encoder2.parameters():
+                    param.requires_grad = not encoder_freeze
 
         # Use backbone from torchvision
         else:
             pass
 
     def forward(self, x):
-        pred_logits = self.model(x)
+        if (self.fusion == None) or (self.fusion == "early"):
+            pred_logits = self.model(x)
+        if self.fusion == "intermediate":
+            # Separate different inputs
+            input1 = x[:, : self.n_channels_med1, :, :]
+            input2 = x[:, : self.n_channels_med2, :, :]
+
+            # Run inputs through encoders
+            features1 = self.encoder1(input1)
+            features2 = self.encoder2(input2)
+
+            # Concatenate, squeeze-and-excite and halve features of different encoders
+            features = []
+            # Loop through lists of feature maps
+            for index, feature12 in enumerate(zip(features1, features2)):
+                feature1, feature2 = feature12
+                feature_cat = torch.concatenate((feature1, feature2), dim=1)
+                channels = feature_cat.shape[1]
+
+                # Halve first feature map differently as its original channel size
+                if index == 0:
+                    halver = nn.Conv2d(
+                        self.n_channels_med1 + self.n_channels_med2,
+                        self.n_channels_med1,
+                        kernel_size=(1, 1),
+                        bias=False,
+                    ).to(next(self.encoder1.parameters()).device)
+                else:
+                    halver = nn.Sequential(
+                        torchvision.ops.SqueezeExcitation(
+                            input_channels=channels, squeeze_channels=channels // 16
+                        ),
+                        nn.Conv2d(
+                            channels, channels // 2, kernel_size=(1, 1), bias=False
+                        ),
+                        nn.BatchNorm2d(channels // 2),
+                        nn.ReLU(inplace=True),
+                    ).to(next(self.encoder1.parameters()).device)
+                feature = halver(feature_cat)
+                features.append(feature)
+
+            # Create segmentation predictions
+            decoded = self.decoder(*features)
+            pred_logits = self.seghead(decoded)
+
         return pred_logits
 
 
