@@ -60,6 +60,8 @@ FVFM_DIR = _config_dict["FVFM_DIR"]
 if FVFM_DIR == "None":
     FVFM_DIR = eval(FVFM_DIR)  # In case of no FvFm
 FUSION = _config_dict["FUSION"]
+if FUSION == "None":
+    FUSION = eval(FUSION)  # In case of no fusion
 TRAIN_FRAC = _config_dict["TRAIN_FRAC"]
 TRAIN_TRANSFORMS = A.Compose([eval(_tf) for _tf in _config_dict["TRAIN_TRANSFORMS"]])
 TEST_TRANSFORMS = A.Compose([eval(_tf) for _tf in _config_dict["TEST_TRANSFORMS"]])
