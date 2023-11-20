@@ -255,13 +255,19 @@ class LettuceSegDataset(Dataset):
             elif (fm_exists) and (fvfm_exists):
                 mask, fm, fvfm = augmentations["masks"]
 
-        # Compile resulting images
+        # Compile resulting images, in a way suitable for fusion if desired
+        result = [img]
         if self.fusion == "early":
             if fm_exists:
                 img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
             if fvfm_exists:
                 img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
-        result = (img, mask)
+        if (self.fusion == "intermediate") or (self.fusion == "late"):
+            if fm_exists:
+                result.append(fm[np.newaxis, :, :])
+            if fvfm_exists:
+                result.append(fvfm[np.newaxis, :, :])
+        result.append(mask)
 
         # Also provide image name if desired
         if self.give_name:
