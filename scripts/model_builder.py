@@ -164,7 +164,7 @@ class Segmenter(nn.Module):
             for index, feature12 in enumerate(zip(features1, features2)):
                 feature1, feature2 = feature12
                 feature_cat = torch.concatenate((feature1, feature2), dim=1)
-                channels = feature_cat.shape[1]
+                num_channels = feature_cat.shape[1]
 
                 # Halve first feature map differently as its original channel size
                 if index == 0:
@@ -173,18 +173,22 @@ class Segmenter(nn.Module):
                         self.n_channels_med1,
                         kernel_size=(1, 1),
                         bias=False,
-                    ).to(next(self.encoder1.parameters()).device)
+                    ).to(feature_cat.device)
                 else:
                     halver = nn.Sequential(
                         torchvision.ops.SqueezeExcitation(
-                            input_channels=channels, squeeze_channels=channels // 16
+                            input_channels=num_channels,
+                            squeeze_channels=num_channels // 16,
                         ),
                         nn.Conv2d(
-                            channels, channels // 2, kernel_size=(1, 1), bias=False
+                            num_channels,
+                            num_channels // 2,
+                            kernel_size=(1, 1),
+                            bias=False,
                         ),
-                        nn.BatchNorm2d(channels // 2),
+                        nn.BatchNorm2d(num_channels // 2),
                         nn.ReLU(inplace=True),
-                    ).to(next(self.encoder1.parameters()).device)
+                    ).to(feature_cat.device)
                 feature = halver(feature_cat)
                 features.append(feature)
 
