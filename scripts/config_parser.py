@@ -75,6 +75,8 @@ ENCODER_WEIGHTS = _config_dict["ENCODER_WEIGHTS"]
 if ENCODER_WEIGHTS == "None":  # Allow for untrained encoder
     ENCODER_WEIGHTS = eval(ENCODER_WEIGHTS)
 N_CHANNELS = _config_dict["N_CHANNELS"]
+N_CHANNELS_MED1 = _config_dict["N_CHANNELS_MED1"]
+N_CHANNELS_MED2 = _config_dict["N_CHANNELS_MED2"]
 N_CLASSES = _config_dict["N_CLASSES"]
 DECODER_ATTENTION = _config_dict["DECODER_ATTENTION"]
 if DECODER_ATTENTION == "None":  # Allow for no decoder attention

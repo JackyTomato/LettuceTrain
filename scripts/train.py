@@ -126,6 +126,9 @@ def main():
         n_classes=cp.N_CLASSES,
         decoder_attention=cp.DECODER_ATTENTION,
         encoder_freeze=cp.ENCODER_FREEZE,
+        fusion=cp.FUSION,
+        n_channels_med1=cp.N_CHANNELS_MED1,
+        n_channels_med2=cp.N_CHANNELS_MED2,
     )
     if cp.MULTI_GPU:
         model = nn.DataParallel(model)
