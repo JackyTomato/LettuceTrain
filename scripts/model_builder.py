@@ -92,41 +92,34 @@ class Segmenter(nn.Module):
 
             # Change network architecture for intermediate or late fusion
             if self.fusion == "intermediate":
+                # Extract encoder and deepcopy encoder
+                self.encoder1 = self.model.encoder
+                self.encoder2 = deepcopy(self.encoder1)
+
                 if not encoder_name.startswith("mit"):
-                    # Extract encoder and deepcopy encoder
-                    self.encoder1 = self.model.encoder
-                    self.encoder2 = deepcopy(self.encoder1)
-
                     # Tweak number of channels of encoders if not correct already
-                    if self.encoder1.conv1.weight.shape[1] != self.n_channels_med1:
-                        self.encoder1.conv1.weight = nn.Parameter(
-                            self.encoder1.conv1.weight[:, : self.n_channels_med1, :, :]
+                    first_conv1 = self.encoder1.conv1
+                    first_conv2 = self.encoder2.conv1
+                    if first_conv1.weight.shape[1] != self.n_channels_med1:
+                        first_conv1.weight = nn.Parameter(
+                            first_conv1.weight[:, : self.n_channels_med1, :, :]
                         )
-                    if self.encoder2.conv1.weight.shape[1] != self.n_channels_med2:
-                        self.encoder2.conv1.weight = nn.Parameter(
-                            self.encoder2.conv1.weight[:, : self.n_channels_med2, :, :]
+                    if first_conv2.weight.shape[1] != self.n_channels_med2:
+                        first_conv2.weight = nn.Parameter(
+                            first_conv2.weight[:, : self.n_channels_med2, :, :]
                         )
-
-                # Squeeze-and-excitation block to merge encoders with feature recalibration
-                layers_encoder1 = []
-                for module in self.encoder1.modules():
-                    if isinstance(module, nn.Conv2d):
-                        layers_encoder1.append(module)
-                last_n_encoder1 = layers_encoder1[-1].out_channels
-
-                se_channels = last_n_encoder1 * 2
-                self.se = torchvision.ops.SqueezeExcitation(
-                    input_channels=se_channels, squeeze_channels=int(se_channels / 16)
-                )
-
-                # Conv layer with batch normalization and ReLU to reduce number of channels
-                self.conv_halver = nn.Sequential(
-                    nn.Conv2d(
-                        se_channels, last_n_encoder1, kernel_size=(1, 1), bias=False
-                    ),
-                    nn.BatchNorm2d(last_n_encoder1),
-                    nn.ReLU(inplace=True),
-                )
+                else:
+                    # Tweak number of channels of encoders if not correct already
+                    first_conv1 = self.encoder1.patch_embed1.proj
+                    first_conv2 = self.encoder2.patch_embed1.proj
+                    if first_conv1.weight.shape[1] != self.n_channels_med1:
+                        first_conv1.weight = nn.Parameter(
+                            first_conv1.weight[:, : self.n_channels_med1, :, :]
+                        )
+                    if first_conv2.weight.shape[1] != self.n_channels_med2:
+                        first_conv2.weight = nn.Parameter(
+                            first_conv2.weight[:, : self.n_channels_med2, :, :]
+                        )
 
                 # Separate decoder and segmentation head from encoders
                 self.decoder = self.model.decoder
@@ -174,14 +167,26 @@ class Segmenter(nn.Module):
                         kernel_size=(1, 1),
                         bias=False,
                     ).to(feature_cat.device)
+
+                # Squeeze-and-excite and halve channels of features
                 else:
+                    channel_attention = torchvision.ops.SqueezeExcitation(
+                        input_channels=num_channels,
+                        squeeze_channels=num_channels // 4,
+                    )
+                    feature_cat = channel_attention(feature_cat)
+
                     halver = nn.Sequential(
-                        torchvision.ops.SqueezeExcitation(
-                            input_channels=num_channels,
-                            squeeze_channels=num_channels // 16,
-                        ),
                         nn.Conv2d(
                             num_channels,
+                            num_channels // (4 / 3),
+                            kernel_size=(1, 1),
+                            bias=False,
+                        ),
+                        nn.BatchNorm2d(num_channels // (4 / 3)),
+                        nn.ReLU(inplace=True),
+                        nn.Conv2d(
+                            num_channels // (4 / 3),
                             num_channels // 2,
                             kernel_size=(1, 1),
                             bias=False,
@@ -189,6 +194,7 @@ class Segmenter(nn.Module):
                         nn.BatchNorm2d(num_channels // 2),
                         nn.ReLU(inplace=True),
                     ).to(feature_cat.device)
+
                 feature = halver(feature_cat)
                 features.append(feature)
 
