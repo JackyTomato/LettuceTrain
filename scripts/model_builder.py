@@ -109,17 +109,9 @@ class Segmenter(nn.Module):
                             first_conv2.weight[:, : self.n_channels_med2, :, :]
                         )
                 else:
-                    # Tweak number of channels of encoders if not correct already
-                    first_conv1 = self.encoder1.patch_embed1.proj
-                    first_conv2 = self.encoder2.patch_embed1.proj
-                    if first_conv1.weight.shape[1] != self.n_channels_med1:
-                        first_conv1.weight = nn.Parameter(
-                            first_conv1.weight[:, : self.n_channels_med1, :, :]
-                        )
-                    if first_conv2.weight.shape[1] != self.n_channels_med2:
-                        first_conv2.weight = nn.Parameter(
-                            first_conv2.weight[:, : self.n_channels_med2, :, :]
-                        )
+                    raise (
+                        "[INFO] Mixed vision transformer does not support intermediate fusion!"
+                    )
 
                 # Separate decoder and segmentation head from encoders
                 self.decoder = self.model.decoder
@@ -153,6 +145,7 @@ class Segmenter(nn.Module):
 
             # Concatenate, squeeze-and-excite and halve features of different encoders
             features = []
+
             # Loop through lists of feature maps
             for index, feature12 in enumerate(zip(features1, features2)):
                 feature1, feature2 = feature12
