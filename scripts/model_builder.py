@@ -315,8 +315,8 @@ class Segmenter(nn.Module):
                     # Don't use weight gate for first feature maps as it has original resolutions
                     if index != 0:
                         # Calculate weights for each feature map of different encoders
-                        wg1 = self.wgs[index * 2]
-                        wg2 = self.wgs[index * 2 + 1]
+                        wg1 = self.wgs[(index - 1) * 2]
+                        wg2 = self.wgs[(index - 1) * 2 + 1]
                         weight1 = wg1(feature_cat)
                         weight2 = wg2(feature_cat)
 
