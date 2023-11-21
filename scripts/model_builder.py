@@ -17,12 +17,12 @@ from copy import deepcopy
 
 # Create weight generator for Kim gated fusion module
 class kim_wg(nn.Module):
-    def __init__(self, channels):
+    def __init__(self, in_channels):
         super(kim_wg, self).__init__()
         self.weight_generator = nn.Sequential(
             nn.Conv2d(
-                channels,
-                channels,
+                in_channels,
+                1,
                 kernel_size=(3, 3),
                 padding=1,
             ),
@@ -186,16 +186,16 @@ class Segmenter(nn.Module):
                     self.kim_gated_fusion = True
                     if self.kim_gated_fusion:
                         # Initialize weight generators to create weighted sum of features
-                        self.wg1_1 = kim_wg(channels=128)
-                        self.wg1_2 = kim_wg(channels=128)
-                        self.wg2_1 = kim_wg(channels=512)
-                        self.wg2_2 = kim_wg(channels=512)
-                        self.wg3_1 = kim_wg(channels=1024)
-                        self.wg3_2 = kim_wg(channels=1024)
-                        self.wg4_1 = kim_wg(channels=2048)
-                        self.wg4_2 = kim_wg(channels=2048)
-                        self.wg5_1 = kim_wg(channels=4096)
-                        self.wg5_2 = kim_wg(channels=4096)
+                        self.wg1_1 = kim_wg(in_channels=128)
+                        self.wg1_2 = kim_wg(in_channels=128)
+                        self.wg2_1 = kim_wg(in_channels=512)
+                        self.wg2_2 = kim_wg(in_channels=512)
+                        self.wg3_1 = kim_wg(in_channels=1024)
+                        self.wg3_2 = kim_wg(in_channels=1024)
+                        self.wg4_1 = kim_wg(in_channels=2048)
+                        self.wg4_2 = kim_wg(in_channels=2048)
+                        self.wg5_1 = kim_wg(in_channels=4096)
+                        self.wg5_2 = kim_wg(in_channels=4096)
 
                         # Reduce number of channels by half after fusion
                         self.halver0 = conv_channel_changer(
@@ -323,7 +323,9 @@ class Segmenter(nn.Module):
                         # Calculate weighted sum of feature maps of different encoders
                         weighted_feature1 = feature1 * weight1
                         weighted_feature2 = feature2 * weight2
-                        feature = torch.add(weighted_feature1, weighted_feature2)
+                        feature = torch.concatenate(
+                            (weighted_feature1, weighted_feature2), dim=1
+                        )
                     else:
                         feature = feature_cat
 
