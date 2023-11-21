@@ -186,8 +186,6 @@ class Segmenter(nn.Module):
                     self.kim_gated_fusion = True
                     if self.kim_gated_fusion:
                         # Initialize weight generators to create weighted sum of features
-                        self.wg0_1 = kim_wg(channels=5)
-                        self.wg0_2 = kim_wg(channels=5)
                         self.wg1_1 = kim_wg(channels=128)
                         self.wg1_2 = kim_wg(channels=128)
                         self.wg2_1 = kim_wg(channels=512)
@@ -223,8 +221,6 @@ class Segmenter(nn.Module):
                         # Compile all weight generators and halvers
                         self.wgs = nn.ModuleList(
                             [
-                                self.wg0_1,
-                                self.wg0_2,
                                 self.wg1_1,
                                 self.wg1_2,
                                 self.wg2_1,
@@ -316,23 +312,31 @@ class Segmenter(nn.Module):
                 feature_cat = torch.concatenate((feature1, feature2), dim=1)
 
                 if self.kim_gated_fusion:
-                    # Calculate weights for each feature map of different encoders
-                    wg1 = self.wgs[index * 2]
-                    wg2 = self.wgs[index * 2 + 1]
-                    weight1 = wg1(feature_cat)
-                    weight2 = wg2(feature_cat)
+                    # Don't use weight gate for first feature maps as it has original resolutions
+                    if index != 0:
+                        # Calculate weights for each feature map of different encoders
+                        wg1 = self.wgs[index * 2]
+                        wg2 = self.wgs[index * 2 + 1]
+                        weight1 = wg1(feature_cat)
+                        weight2 = wg2(feature_cat)
 
-                    # Calculate weighted sum of feature maps of different encoders
-                    weighted_feature1 = feature1 * weight1
-                    weighted_feature2 = feature2 * weight2
-                    weighted_sum = torch.add(weighted_feature1, weighted_feature2)
-                    features.append(weighted_sum)
+                        # Calculate weighted sum of feature maps of different encoders
+                        weighted_feature1 = feature1 * weight1
+                        weighted_feature2 = feature2 * weight2
+                        feature = torch.add(weighted_feature1, weighted_feature2)
+                    else:
+                        feature = feature_cat
+
+                    # Half number of channels after fusion
+                    halver = self.halvers[index]
+                    fused_feature = halver(feature)
+                    features.append(fused_feature)
 
                 else:
                     # Squeeze-and-excite and halve each feature map of different encoders
                     halver = self.halvers[index]
-                    feature = halver(feature_cat)
-                    features.append(feature)
+                    fused_feature = halver(feature_cat)
+                    features.append(fused_feature)
 
             # Create segmentation predictions
             decoded = self.decoder(*features)
