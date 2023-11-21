@@ -15,6 +15,74 @@ import re
 from copy import deepcopy
 
 
+# Create weight generator for Kim gated fusion module
+class kim_wg(nn.Module):
+    def __init__(self, channels):
+        super(kim_wg, self).__init__()
+        self.weight_generator = nn.Sequential(
+            nn.Conv2d(
+                channels,
+                channels,
+                kernel_size=(3, 3),
+                padding=1,
+            ),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, x):
+        return self.weight_generator(x)
+
+
+# Change number of channels using a 1x1x1 conv layer
+class conv_channel_changer(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(conv_channel_changer, self).__init__()
+        self.changer = nn.Sequential(
+            nn.Conv2d(
+                in_channels,
+                out_channels,
+                kernel_size=(1, 1),
+                bias=False,
+            ),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x):
+        return self.changer(x)
+
+
+# Squeeze-and-excite then half the number of channels
+class se_halver(nn.Module):
+    def __init__(self, channels):
+        super(se_halver, self).__init__()
+        self.halver = nn.Sequential(
+            torchvision.ops.SqueezeExcitation(
+                input_channels=channels,
+                squeeze_channels=channels // 4,
+            ),
+            nn.Conv2d(
+                channels,
+                int(channels / (4 / 3)),
+                kernel_size=(1, 1),
+                bias=False,
+            ),
+            nn.BatchNorm2d(int(channels / (4 / 3))),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(
+                int(channels / (4 / 3)),
+                channels // 2,
+                kernel_size=(1, 1),
+                bias=False,
+            ),
+            nn.BatchNorm2d(channels // 2),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x):
+        return self.halver(x)
+
+
 # Define nn.Module class for model
 class Segmenter(nn.Module):
     def __init__(
@@ -92,11 +160,11 @@ class Segmenter(nn.Module):
 
             # Change network architecture for intermediate or late fusion
             if self.fusion == "intermediate":
-                # Extract encoder and deepcopy encoder
-                self.encoder1 = self.model.encoder
-                self.encoder2 = deepcopy(self.encoder1)
-
                 if not encoder_name.startswith("mit"):
+                    # Extract encoder and deepcopy encoder
+                    self.encoder1 = self.model.encoder
+                    self.encoder2 = deepcopy(self.encoder1)
+
                     # Tweak number of channels of encoders if not correct already
                     first_conv1 = self.encoder1.conv1
                     first_conv2 = self.encoder2.conv1
@@ -111,6 +179,41 @@ class Segmenter(nn.Module):
                 else:
                     raise (
                         "[INFO] Mixed vision transformer does not support intermediate fusion!"
+                    )
+
+                # Initialize intermediate fusion modules
+                if encoder_name == "timm-res2net50_14w_8s":
+                    kim_gated_fusion = False
+                    if kim_gated_fusion:
+                        pass
+                    else:
+                        # For first feature map at original number of channels
+                        self.halver0 = conv_channel_changer(
+                            in_channels=self.n_channels_med1 + self.n_channels_med2,
+                            out_channels=self.n_channels_med1,
+                        )
+
+                        # For subsequent feature maps
+                        self.halver1 = se_halver(channels=128)
+                        self.halver2 = se_halver(channels=512)
+                        self.halver3 = se_halver(channels=1024)
+                        self.halver4 = se_halver(channels=2048)
+                        self.halver5 = se_halver(channels=4096)
+
+                        # Compile all halvers to be used for each corresponding feature map
+                        self.halvers = nn.ModuleList(
+                            [
+                                self.halver0,
+                                self.halver1,
+                                self.halver2,
+                                self.halver3,
+                                self.halver4,
+                                self.halver5,
+                            ]
+                        )
+                else:
+                    raise (
+                        "[INFO] This encoder does not yet support intermediate fusion!"
                     )
 
                 # Separate decoder and segmentation head from encoders
@@ -143,50 +246,16 @@ class Segmenter(nn.Module):
             features1 = self.encoder1(input1)
             features2 = self.encoder2(input2)
 
-            # Concatenate, squeeze-and-excite and halve features of different encoders
-            features = []
-
             # Loop through lists of feature maps
+            features = []
             for index, feature12 in enumerate(zip(features1, features2)):
+                # Concatenate feature maps of different encoders
                 feature1, feature2 = feature12
                 feature_cat = torch.concatenate((feature1, feature2), dim=1)
-                num_channels = feature_cat.shape[1]
 
-                # Halve first feature map differently as its original channel size
-                if index == 0:
-                    self.halver = nn.Conv2d(
-                        self.n_channels_med1 + self.n_channels_med2,
-                        self.n_channels_med1,
-                        kernel_size=(1, 1),
-                        bias=False,
-                    ).to(feature_cat.device)
-
-                # Squeeze-and-excite and halve channels of features
-                else:
-                    self.halver = nn.Sequential(
-                        torchvision.ops.SqueezeExcitation(
-                            input_channels=num_channels,
-                            squeeze_channels=num_channels // 4,
-                        ),
-                        nn.Conv2d(
-                            num_channels,
-                            int(num_channels / (4 / 3)),
-                            kernel_size=(1, 1),
-                            bias=False,
-                        ),
-                        nn.BatchNorm2d(int(num_channels / (4 / 3))),
-                        nn.ReLU(inplace=True),
-                        nn.Conv2d(
-                            int(num_channels / (4 / 3)),
-                            num_channels // 2,
-                            kernel_size=(1, 1),
-                            bias=False,
-                        ),
-                        nn.BatchNorm2d(num_channels // 2),
-                        nn.ReLU(inplace=True),
-                    ).to(feature_cat.device)
-
-                feature = self.halver(feature_cat)
+                # Squeeze-and-excite and halve each feature map of different encoders
+                halver = self.halvers[index]
+                feature = halver(feature_cat)
                 features.append(feature)
 
             # Create segmentation predictions
