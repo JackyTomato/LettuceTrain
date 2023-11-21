@@ -170,13 +170,11 @@ class Segmenter(nn.Module):
 
                 # Squeeze-and-excite and halve channels of features
                 else:
-                    channel_attention = torchvision.ops.SqueezeExcitation(
-                        input_channels=num_channels,
-                        squeeze_channels=num_channels // 4,
-                    )
-                    feature_cat = channel_attention(feature_cat)
-
                     halver = nn.Sequential(
+                        torchvision.ops.SqueezeExcitation(
+                            input_channels=num_channels,
+                            squeeze_channels=num_channels // 4,
+                        ),
                         nn.Conv2d(
                             num_channels,
                             num_channels // (4 / 3),
