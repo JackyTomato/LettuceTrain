@@ -161,7 +161,7 @@ class Segmenter(nn.Module):
 
                 # Halve first feature map differently as its original channel size
                 if index == 0:
-                    halver = nn.Conv2d(
+                    self.halver = nn.Conv2d(
                         self.n_channels_med1 + self.n_channels_med2,
                         self.n_channels_med1,
                         kernel_size=(1, 1),
@@ -170,7 +170,7 @@ class Segmenter(nn.Module):
 
                 # Squeeze-and-excite and halve channels of features
                 else:
-                    halver = nn.Sequential(
+                    self.halver = nn.Sequential(
                         torchvision.ops.SqueezeExcitation(
                             input_channels=num_channels,
                             squeeze_channels=num_channels // 4,
@@ -193,7 +193,7 @@ class Segmenter(nn.Module):
                         nn.ReLU(inplace=True),
                     ).to(feature_cat.device)
 
-                feature = halver(feature_cat)
+                feature = self.halver(feature_cat)
                 features.append(feature)
 
             # Create segmentation predictions
