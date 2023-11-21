@@ -183,9 +183,71 @@ class Segmenter(nn.Module):
 
                 # Initialize intermediate fusion modules
                 if encoder_name == "timm-res2net50_14w_8s":
-                    kim_gated_fusion = False
-                    if kim_gated_fusion:
-                        pass
+                    self.kim_gated_fusion = True
+                    if self.kim_gated_fusion:
+                        # Initialize weight generators to create weighted sum of features
+                        self.wg0_1 = kim_wg(channels=5)
+                        self.wg0_2 = kim_wg(channels=5)
+                        self.wg1_1 = kim_wg(channels=128)
+                        self.wg1_2 = kim_wg(channels=128)
+                        self.wg2_1 = kim_wg(channels=512)
+                        self.wg2_2 = kim_wg(channels=512)
+                        self.wg3_1 = kim_wg(channels=1024)
+                        self.wg3_2 = kim_wg(channels=1024)
+                        self.wg4_1 = kim_wg(channels=2048)
+                        self.wg4_2 = kim_wg(channels=2048)
+                        self.wg5_1 = kim_wg(channels=4096)
+                        self.wg5_2 = kim_wg(channels=4096)
+
+                        # Reduce number of channels by half after fusion
+                        self.halver0 = conv_channel_changer(
+                            in_channels=self.n_channels_med1 + self.n_channels_med2,
+                            out_channels=self.n_channels_med1,
+                        )
+                        self.halver1 = conv_channel_changer(
+                            in_channels=128, out_channels=64
+                        )
+                        self.halver2 = conv_channel_changer(
+                            in_channels=512, out_channels=256
+                        )
+                        self.halver3 = conv_channel_changer(
+                            in_channels=1024, out_channels=512
+                        )
+                        self.halver4 = conv_channel_changer(
+                            in_channels=2048, out_channels=1024
+                        )
+                        self.halver5 = conv_channel_changer(
+                            in_channels=4096, out_channels=2048
+                        )
+
+                        # Compile all weight generators and halvers
+                        self.wgs = nn.ModuleList(
+                            [
+                                self.wg0_1,
+                                self.wg0_2,
+                                self.wg1_1,
+                                self.wg1_2,
+                                self.wg2_1,
+                                self.wg2_2,
+                                self.wg3_1,
+                                self.wg3_2,
+                                self.wg4_1,
+                                self.wg4_2,
+                                self.wg5_1,
+                                self.wg5_2,
+                            ]
+                        )
+                        self.halvers = nn.ModuleList(
+                            [
+                                self.halver0,
+                                self.halver1,
+                                self.halver2,
+                                self.halver3,
+                                self.halver4,
+                                self.halver5,
+                            ]
+                        )
+
                     else:
                         # For first feature map at original number of channels
                         self.halver0 = conv_channel_changer(
@@ -253,10 +315,24 @@ class Segmenter(nn.Module):
                 feature1, feature2 = feature12
                 feature_cat = torch.concatenate((feature1, feature2), dim=1)
 
-                # Squeeze-and-excite and halve each feature map of different encoders
-                halver = self.halvers[index]
-                feature = halver(feature_cat)
-                features.append(feature)
+                if self.kim_gated_fusion:
+                    # Calculate weights for each feature map of different encoders
+                    wg1 = self.wgs[index * 2]
+                    wg2 = self.wgs[index * 2 + 1]
+                    weight1 = wg1(feature_cat)
+                    weight2 = wg2(feature_cat)
+
+                    # Calculate weighted sum of feature maps of different encoders
+                    weighted_feature1 = feature1 * weight1
+                    weighted_feature2 = feature2 * weight2
+                    weighted_sum = torch.add(weighted_feature1, weighted_feature2)
+                    features.append(weighted_sum)
+
+                else:
+                    # Squeeze-and-excite and halve each feature map of different encoders
+                    halver = self.halvers[index]
+                    feature = halver(feature_cat)
+                    features.append(feature)
 
             # Create segmentation predictions
             decoded = self.decoder(*features)
