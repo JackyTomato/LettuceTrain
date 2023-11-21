@@ -177,14 +177,14 @@ class Segmenter(nn.Module):
                         ),
                         nn.Conv2d(
                             num_channels,
-                            num_channels // (4 / 3),
+                            int(num_channels / (4 / 3)),
                             kernel_size=(1, 1),
                             bias=False,
                         ),
-                        nn.BatchNorm2d(num_channels // (4 / 3)),
+                        nn.BatchNorm2d(int(num_channels / (4 / 3))),
                         nn.ReLU(inplace=True),
                         nn.Conv2d(
-                            num_channels // (4 / 3),
+                            int(num_channels / (4 / 3)),
                             num_channels // 2,
                             kernel_size=(1, 1),
                             bias=False,
