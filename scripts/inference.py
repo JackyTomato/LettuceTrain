@@ -202,21 +202,23 @@ class LettuceSegNoLabelDataset(Dataset):
 
 def main():
     # Set globals and directories
-    MULTI_GPU = False
+    MULTI_GPU = True
     PERFORM_FN = None
-    RGB_ALPHA = False
+    RGB_ALPHA = True
 
-    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn3/rgb_crops"
+    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb"
     label_dir = None
-    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn3/UnetMit-b3_bg-bin_masks"
-    savename_appendix = "_UnetMit-b3_bg_mask.png"
+    target_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb/UnetMit-b3_bg-bin_masks"
+    )
+    savename_appendix = "_UnetMit-b3_lr1e-4_Ldice_ep100_bg_mask.png"
     perform_save_name = None
 
     transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
     DEVICE = "cuda:0"
     model_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-    model_name = "UnetMit-b3_lr1e-4_b32_Ldicebce_ep100.pth.tar"
+    model_name = "UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
 
     # From directory inference
     # With performance tracking
@@ -342,7 +344,7 @@ def main():
                 if RGB_ALPHA:
                     # Apply predicted mask on input image
                     masked_img = draw_segmentation_masks(
-                        input_img, ~output_mask, alpha=0.7
+                        input_img, ~output_mask, alpha=1
                     )
                     masked_img = masked_img.detach()
                     masked_img = F.to_pil_image(masked_img)
