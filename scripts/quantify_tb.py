@@ -20,6 +20,8 @@ from pathlib import Path
 def binary2area(img, area_value=1):
     """Returns pixel area of pixels of interest from a binary image as NumPy array.
 
+    If image is non-binary, all values above 0 are converted to 1.
+
     Args:
         img (np.ndarray): Binary image, should be a NumPy array of ints, floats or bools.
         area_value (int, optional): Value to retrieve area of, 0 or 1. Defaults to 1.
@@ -27,8 +29,8 @@ def binary2area(img, area_value=1):
     Returns:
         int: Pixel area of pixels of interest, i.e. total count of the pixels of interest.
     """
-    if 255.0 in img:
-        img[img == 255.0] = 1.0
+    if any(img > 0):
+        img[img > 0] = 1.0
     area = np.count_nonzero(img == area_value)
     return area
 
