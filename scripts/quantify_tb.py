@@ -29,7 +29,7 @@ def binary2area(img, area_value=1):
     Returns:
         int: Pixel area of pixels of interest, i.e. total count of the pixels of interest.
     """
-    if any(img > 0):
+    if np.any(img > 0):
         img[img > 0] = 1.0
     area = np.count_nonzero(img == area_value)
     return area
@@ -37,10 +37,14 @@ def binary2area(img, area_value=1):
 
 def main():
     # Define directories for loading and saving
-    bg_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg-bin_masks_combined"
-    tb_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb_masks_combined"
-    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn"
-    values_save_name = "UnetMit-b3_bg_UnetMit-b3_tb_areas.tsv"
+    bg_mask_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb/UnetMit-b3_bg-rgb_masks"
+    )
+    tb_mask_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb/UnetMit-b3_tb-bin_masks"
+    )
+    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb"
+    values_save_name = "UnetMit-b3_lr1e-4_Ldice_ep100_bg_UnetMit-b3_lr1e-4_b32_Ldice_ep100_tb_areas.tsv"
 
     # Gather filenames, ignore non-.png files
     bg_names = sorted(os.listdir(bg_mask_dir))
