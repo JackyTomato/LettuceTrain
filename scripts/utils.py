@@ -108,16 +108,16 @@ class DiceBCEWithLogitsLoss(nn.Module):
 
 
 class JaccardWithLogitsLoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
+    def __init__(self, smooth=0):
         """Jaccard index or IoU as a loss function.
 
         Args:
-            weight (optional): Irrelevant for loss function. Defaults to None.
-            size_average (optional): Irrelevant for loss function. Defaults to True.
+            smooth (int/float, optional): Smoothes out Jaccard index by adding to the denominator. Defaults to 0.
         """
         super(JaccardWithLogitsLoss, self).__init__()
+        self.smooth = smooth
 
-    def forward(self, inputs, targets, smooth=1):
+    def forward(self, inputs, targets):
         # Convert logits to probabilities
         prob_inputs = torch.sigmoid(inputs)
 
@@ -136,7 +136,7 @@ class JaccardWithLogitsLoss(nn.Module):
             else:
                 intersect = (pred * label).sum()
                 union = pred.sum() + label.sum() - intersect
-                jaccard_loss = 1 - (intersect / (union + smooth))
+                jaccard_loss = 1 - (intersect / (union + self.smooth))
 
             if type(jaccard_loss) == "torch.Tensor":
                 jaccard_loss = jaccard_loss.item()
