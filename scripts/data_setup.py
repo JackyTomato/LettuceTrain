@@ -71,6 +71,8 @@ class LettuceSegDataset(Dataset):
             print(
                 "[INFO] Numbers of images and masks are inequal, cancel if unintended!"
             )
+        else:
+            incomplete_masks = False
 
         # Create lists of filepaths for images and masks
         if incomplete_masks is False:
