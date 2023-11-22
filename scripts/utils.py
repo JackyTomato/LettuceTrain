@@ -126,11 +126,11 @@ class JaccardWithLogitsLoss(nn.Module):
         for pred, label in zip(prob_inputs, targets):
             # If predictions and ground-truth are both empty
             if (pred.sum() == 0) and (label.sum() == 0):
-                jaccard_loss = 1
+                jaccard_loss = 0
 
             # If predictions isn't empty but ground-truth is empty
             elif (pred.sum() > 0) and (label.sum() == 0):
-                jaccard_loss = 0
+                jaccard_loss = 1
 
             # If predictions and ground-truth aren't both empty
             else:
