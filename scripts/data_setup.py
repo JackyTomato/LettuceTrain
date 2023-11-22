@@ -236,27 +236,37 @@ class LettuceSegDataset(Dataset):
 
         # Apply data augmentation transforms to image, mask and optionally Fm and FvFm
         if self.transform is not None:
-            grayscales = [mask]
-            if fm_exists:
-                grayscales.append(fm)
-            if fvfm_exists:
-                grayscales.append(fvfm)
-            augmentations = self.transform(image=img, masks=grayscales)
+            if fm_exists or fvfm_exists:
+                # Apply augmentations
+                grayscales = [mask]
+                if fm_exists:
+                    grayscales.append(fm)
+                if fvfm_exists:
+                    grayscales.append(fvfm)
+                augmentations = self.transform(image=img, masks=grayscales)
+
+                # Retrieve augmentations
+                if (fm_exists) and (not fvfm_exists):
+                    mask, fm = augmentations["masks"]
+                elif (not fm_exists) and (fvfm_exists):
+                    mask, fvfm = augmentations["masks"]
+                elif (fm_exists) and (fvfm_exists):
+                    mask, fm, fvfm = augmentations["masks"]
+            else:
+                # Apply augmentations
+                augmentations = self.transform(image=img, mask=mask)
+
+                # Retrieve augmentations
+                mask = augmentations["mask"]
             img = augmentations["image"]
-            if (not fm_exists) and (not fvfm_exists):
-                mask = augmentations["masks"]
-            elif (fm_exists) and (not fvfm_exists):
-                mask, fm = augmentations["masks"]
-            elif (not fm_exists) and (fvfm_exists):
-                mask, fvfm = augmentations["masks"]
-            elif (fm_exists) and (fvfm_exists):
-                mask, fm, fvfm = augmentations["masks"]
 
         # Compile resulting images, in a way suitable for fusion if desired
         if fm_exists:
             img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
         if fvfm_exists:
             img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
+        print(img.shape)
+        print(len(mask))
         result = (img, mask)
 
         # Also provide image name if desired
