@@ -204,21 +204,23 @@ def main():
     # Set globals and directories
     MULTI_GPU = True
     PERFORM_FN = None
-    RGB_ALPHA = True
+    RGB_ALPHA = False
 
-    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb"
+    img_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb/UnetMit-b3_bg-rgb_masks"
+    )
     label_dir = None
     target_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb/UnetMit-b3_bg-bin_masks"
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb/UnetMit-b3_tb-bin_masks"
     )
-    savename_appendix = "_UnetMit-b3_lr1e-4_Ldice_ep100_bg_mask.png"
+    savename_appendix = "_UnetMit-b3_lr1e-4_b32_Ldice_ep100_tb_mask.png"
     perform_save_name = None
 
     transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
     DEVICE = "cuda:0"
     model_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-    model_name = "UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
+    model_name = "tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
 
     # From directory inference
     # With performance tracking
