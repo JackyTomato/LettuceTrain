@@ -107,6 +107,46 @@ class DiceBCEWithLogitsLoss(nn.Module):
         return Dice_BCE
 
 
+class JaccardWithLogitsLoss(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        """Jaccard index or IoU as a loss function.
+
+        Args:
+            weight (optional): Irrelevant for loss function. Defaults to None.
+            size_average (optional): Irrelevant for loss function. Defaults to True.
+        """
+        super(JaccardWithLogitsLoss, self).__init__()
+
+    def forward(self, inputs, targets, smooth=1):
+        # Convert logits to probabilities
+        prob_inputs = torch.sigmoid(inputs)
+
+        # Calculate Jaccard loss for every sample in batch
+        jaccard_losses = []
+        for pred, label in zip(prob_inputs, targets):
+            # If predictions and ground-truth are both empty
+            if (pred.sum() == 0) and (label.sum() == 0):
+                jaccard_loss = 1
+
+            # If predictions isn't empty but ground-truth is empty
+            elif (pred.sum() > 0) and (label.sum() == 0):
+                jaccard_loss = 0
+
+            # If predictions and ground-truth aren't both empty
+            else:
+                intersect = (pred * label).sum()
+                union = pred.sum() + label.sum() - intersect
+                jaccard_loss = 1 - (intersect / (union + smooth))
+
+            if type(jaccard_loss) == "torch.Tensor":
+                jaccard_loss = jaccard_loss.item()
+            jaccard_losses.append(jaccard_loss)
+
+        # Calculate mean Jaccard over whole batch
+        mean_jaccard_losses = sum(jaccard_losses) / len(jaccard_losses)
+        return mean_jaccard_losses
+
+
 # Performance metrics
 def class_accuracy(pred_logits, labels):
     """Calculate classification accuracy.
@@ -174,6 +214,8 @@ def binary_jaccard(pred_logits, labels):
             union = pred.sum() + label.sum() - intersect
             jaccard = intersect / union
 
+        if type(jaccard) == "torch.Tensor":
+            jaccard = jaccard.item()
         jaccards.append(jaccard)
 
     # Calculate mean Jaccard over whole batch
