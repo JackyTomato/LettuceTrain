@@ -265,8 +265,6 @@ class LettuceSegDataset(Dataset):
             img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
         if fvfm_exists:
             img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
-        print(img.shape)
-        print(len(mask))
         result = (img, mask)
 
         # Also provide image name if desired
