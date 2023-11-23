@@ -37,14 +37,12 @@ def binary2area(img, area_value=1):
 
 def main():
     # Define directories for loading and saving
-    bg_mask_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb/UnetMit-b3_bg-rgb_masks"
+    bg_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/UnetMit-b3_lr1e-4_Ldice_ep100_bg-rgb_masks"
+    tb_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/UnetMit-b3_lr1e-4_Ldice_ep100_tb-bin_masks"
+    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete"
+    values_save_name = (
+        "UnetMit-b3_lr1e-4_Ldice_ep100_bg_UnetMit-b3_lr1e-4_Ldice_ep100_tb_areas.tsv"
     )
-    tb_mask_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb/UnetMit-b3_tb-bin_masks"
-    )
-    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb"
-    values_save_name = "UnetMit-b3_lr1e-4_Ldice_ep100_bg_UnetMit-b3_lr1e-4_b32_Ldice_ep100_tb_areas.tsv"
 
     # Gather filenames, ignore non-.png files
     bg_names = sorted(os.listdir(bg_mask_dir))
