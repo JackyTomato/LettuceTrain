@@ -669,14 +669,16 @@ def path_overlay_crop(
     re_rgb = util.img_as_ubyte(re_rgb)
     fvfm = util.img_as_ubyte(fvfm)
 
-    # Extract tray ID from RGB image filename
+    # Extract experiment number and tray ID from RGB image filename
     rgb_name = os.path.basename(imgtype_paths[0])
+    exp = int(rgb_name[:2])
     regex_trayID = re.compile(".+Tray_(\d{2,})")
     match_trayID = regex_trayID.match(rgb_name)
     trayID = int(match_trayID.group(1))
 
     # Determine if image file has 4 or 5 plants
     all_trayIDs = tray_reg["TrayID"]
+    all_trayIDs = all_trayIDs[tray_reg["Experiment"] == exp] # filter on corresponding experiment
     all_trayIDs = [all_trayID.split("_")[-1] for all_trayID in all_trayIDs]
     all_trayIDs = np.array(all_trayIDs, dtype=int)
     ind_trayID = np.where(all_trayIDs == trayID)[0]
@@ -695,6 +697,7 @@ def path_overlay_crop(
     # Save cropped images if desired, with plant names in filename
     if any([rgb_save_dir, fm_save_dir, fvfm_save_dir]):
         all_plantnames = tray_reg["PlantName"]
+        all_plantnames = all_plantnames[tray_reg["Experiment"] == exp] # filter on corresponding experiment
         plantnames = all_plantnames[ind_trayID]
 
     if rgb_save_dir is not None:
