@@ -206,14 +206,10 @@ def main():
     PERFORM_FN = None
     RGB_ALPHA = False
 
-    img_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb/UnetMit-b3_bg-rgb_masks"
-    )
+    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/UnetMit-b3_lr1e-4_Ldice_ep100_bg-rgb_masks"
     label_dir = None
-    target_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/fluor_rgb/UnetMit-b3_tb-bin_masks"
-    )
-    savename_appendix = "_UnetMit-b3_lr1e-4_b32_Ldice_ep100_tb_mask.png"
+    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/UnetMit-b3_lr1e-4_Ldice_ep100_tb-bin_masks"
+    savename_appendix = "_UnetMit-b3_lr1e-4_Ldice_ep100_tb_mask.png"
     perform_save_name = None
 
     transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
