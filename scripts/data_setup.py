@@ -323,7 +323,7 @@ def get_loaders(
         Or when doing K-fold cross validation:
         list: Containing tuples of torch.utils.data.DataLoader objects for training and testing dataset.
     """
-    if kfold is not None:
+    if kfold is None:
         # Get train and test datasets
         train_ds = dataset(
             img_dir=img_dir,
@@ -394,6 +394,7 @@ def get_loaders(
             loaders.append((train_loader, test_loader))
 
     return loaders
+
 
 # MNIST handwritten digit dataset for testing classification
 def MNIST_digit_loaders(batch_size, num_workers, pin_memory=True):
