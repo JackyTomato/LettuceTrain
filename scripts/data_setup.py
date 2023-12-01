@@ -10,10 +10,10 @@ TODO:
 import os
 import torch
 import numpy as np
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from torchvision import transforms, datasets
 from PIL import Image
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, Kfold
 from skimage.transform import resize
 
 # Import supporting modules
@@ -297,6 +297,7 @@ def get_loaders(
     fm_dir=None,
     fvfm_dir=None,
     train_frac=0.75,
+    kfold=None,
     pin_memory=True,
     seed=42,
 ):
@@ -313,52 +314,86 @@ def get_loaders(
         fm_dir (str, optional): Filepath of directory containing Fm images for channel stacked input.
         fvfm_dir (str, optional): Filepath of directory containing FvFm images for channel stacked input.
         train_frac (float, optional): Fraction of data to be used for training. Defaults to 0.75.
+        kfold (int, optional): K for K-fold cross validation. If not None, train_frac is ignored. Defaults to None.
         pin_memory (bool, optional): Speeds up data transfer from CPU to GPU. Defaults to True.
         seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
 
     Returns:
-        _type_: _description_
+        tuple: Contains torch.utils.data.DataLoader objects for training and testing dataset.
+        Or when doing K-fold cross validation:
+        list: Containing tuples of torch.utils.data.DataLoader objects for training and testing dataset.
     """
-    # Get train and test datasets
-    train_ds = dataset(
-        img_dir=img_dir,
-        label_dir=label_dir,
-        train_frac=train_frac,
-        fm_dir=fm_dir,
-        fvfm_dir=fvfm_dir,
-        is_train=True,
-        transform=train_augs,
-        seed=seed,
-    )
-    test_ds = dataset(
-        img_dir=img_dir,
-        label_dir=label_dir,
-        train_frac=train_frac,
-        fm_dir=fm_dir,
-        fvfm_dir=fvfm_dir,
-        is_train=False,
-        transform=test_augs,
-        seed=seed,
-    )
+    if kfold is not None:
+        # Get train and test datasets
+        train_ds = dataset(
+            img_dir=img_dir,
+            label_dir=label_dir,
+            train_frac=train_frac,
+            fm_dir=fm_dir,
+            fvfm_dir=fvfm_dir,
+            is_train=True,
+            transform=train_augs,
+            seed=seed,
+        )
+        test_ds = dataset(
+            img_dir=img_dir,
+            label_dir=label_dir,
+            train_frac=train_frac,
+            fm_dir=fm_dir,
+            fvfm_dir=fvfm_dir,
+            is_train=False,
+            transform=test_augs,
+            seed=seed,
+        )
 
-    # Create DataLoaders of datasets
-    train_loader = DataLoader(
-        train_ds,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-        shuffle=True,
-    )
-    test_loader = DataLoader(
-        test_ds,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-        shuffle=False,
-    )
+        # Create DataLoaders of datasets
+        train_loader = DataLoader(
+            train_ds,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            shuffle=True,
+        )
+        test_loader = DataLoader(
+            test_ds,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            shuffle=False,
+        )
+        loaders = (train_loader, test_loader)
 
-    return train_loader, test_loader
+    # Create dataloaders for each split of K-fold cross validation
+    else:
+        # Create generator of train and set indices for each fold
+        kfolder = Kfold(n_splits=kfold, random_state=seed)
+        inds_kfold = kfolder.split(dataset)
 
+        # Create list of train and test DataLoader objects
+        loaders = []
+        for train_inds, test_inds in inds_kfold:
+            # Suffle indices without replacement
+            train_sampler = torch.utils.data.SubsetRandomSampler(train_inds)
+            test_sampler = torch.utils.data.SubsetRandomSampler(test_inds)
+
+            # Create DataLoaders for current fold and add to list
+            train_loader = DataLoader(
+                train_ds,
+                batch_size=batch_size,
+                num_workers=num_workers,
+                pin_memory=pin_memory,
+                sampler=train_sampler,
+            )
+            test_loader = DataLoader(
+                test_ds,
+                batch_size=batch_size,
+                num_workers=num_workers,
+                pin_memory=pin_memory,
+                sampler=test_sampler,
+            )
+            loaders.append((train_loader, test_loader))
+
+    return loaders
 
 # MNIST handwritten digit dataset for testing classification
 def MNIST_digit_loaders(batch_size, num_workers, pin_memory=True):
