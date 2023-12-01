@@ -262,7 +262,7 @@ def main():
             # Create model save name
             model_name_split = cp.SAVE_MODEL_NAME.split(os.extsep, 1)
             model_new_name = (
-                f"{model_name_split[0]}_fold{fold + 1}{model_name_split[1]}"
+                f"{model_name_split[0]}_fold{fold + 1}.{model_name_split[1]}"
             )
 
             # Setup tqdm loop for progress bar over epochs
