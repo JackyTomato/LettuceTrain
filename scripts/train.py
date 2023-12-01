@@ -259,6 +259,12 @@ def main():
         # Setup tqdm loop for progrss bar over K-folds
         kfold_loop = tqdm(loaders, desc="Cross Validation Folds")
         for fold, (train_loader, test_loader) in enumerate(kfold_loop):
+            # Create model save name
+            model_name_split = cp.SAVE_MODEL_NAME.split(os.extsep, 1)
+            model_new_name = (
+                f"{model_name_split[0]}_fold{fold + 1}{model_name_split[1]}"
+            )
+
             # Setup tqdm loop for progress bar over epochs
             epoch_loop = tqdm(range(cp.NUM_EPOCHS), desc="Epochs")
             for epoch in epoch_loop:
@@ -291,7 +297,7 @@ def main():
                         utils.save_checkpoint(
                             state=checkpoint,
                             target_dir=cp.SAVE_MODEL_DIR,
-                            model_name=cp.SAVE_MODEL_NAME + f"_fold{fold + 1}",
+                            model_name=model_new_name,
                         )
 
                 # Print out epoch number, loss and performance for this epoch
@@ -319,7 +325,7 @@ def main():
                 utils.save_checkpoint(
                     state=final_state,
                     target_dir=cp.SAVE_MODEL_DIR,
-                    model_name=cp.SAVE_MODEL_NAME + f"_fold{fold + 1}",
+                    model_name=model_new_name,
                 )
             elif (
                 cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
@@ -331,7 +337,7 @@ def main():
                 utils.save_checkpoint(
                     state=final_state,
                     target_dir=cp.SAVE_MODEL_DIR,
-                    model_name=cp.SAVE_MODEL_NAME + f"_fold{fold + 1}",
+                    model_name=model_new_name,
                 )
 
             # Save loss and performance during training
