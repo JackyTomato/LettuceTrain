@@ -101,13 +101,14 @@ def main():
     np.random.seed(cp.SEED)
 
     # Create DataLoaders with help from data_setup.py
-    train_loader, test_loader = data_setup.get_loaders(
+    loaders = data_setup.get_loaders(
         dataset=cp.DATASET,
         img_dir=cp.IMG_DIR,
         label_dir=cp.LABEL_DIR,
         fm_dir=cp.FM_DIR,
         fvfm_dir=cp.FVFM_DIR,
         train_frac=cp.TRAIN_FRAC,
+        kfold=cp.KFOLD,
         train_augs=cp.TRAIN_TRANSFORMS,
         test_augs=cp.TEST_TRANSFORMS,
         batch_size=cp.BATCH_SIZE,
@@ -152,101 +153,250 @@ def main():
         "test_perform": [],
     }
 
-    # Setup tqdm loop for progress bar over epochs
-    epoch_loop = tqdm(range(cp.NUM_EPOCHS), desc="Epochs")
+    # Normal training, no K-fold cross validation
+    if cp.KFOLD is None:
+        # Prepare loaders for loop over epochs
+        train_loader, test_loader = loaders
 
-    # Training loop for a number of epochs
-    for epoch in epoch_loop:
-        train_loss, train_perform = engine.train_step(
-            model=model,
-            dataloader=train_loader,
-            loss_fn=cp.LOSS_FN,
-            performance_fn=cp.PERFORMANCE_FN,
-            optimizer=cp.OPTIMIZER,
-            scaler=cp.SCALER,
-            device=cp.DEVICE,
-        )
-        test_loss, test_perform = engine.test_step(
-            model=model,
-            dataloader=test_loader,
-            loss_fn=cp.LOSS_FN,
-            performance_fn=cp.PERFORMANCE_FN,
-            device=cp.DEVICE,
+        # Setup tqdm loop for progress bar over epochs
+        epoch_loop = tqdm(range(cp.NUM_EPOCHS), desc="Epochs")
+        for epoch in epoch_loop:
+            train_loss, train_perform = engine.train_step(
+                model=model,
+                dataloader=train_loader,
+                loss_fn=cp.LOSS_FN,
+                performance_fn=cp.PERFORMANCE_FN,
+                optimizer=cp.OPTIMIZER,
+                scaler=cp.SCALER,
+                device=cp.DEVICE,
+            )
+            test_loss, test_perform = engine.test_step(
+                model=model,
+                dataloader=test_loader,
+                loss_fn=cp.LOSS_FN,
+                performance_fn=cp.PERFORMANCE_FN,
+                device=cp.DEVICE,
+            )
+
+            # Checkpoint model at a given frequency if requested
+            if cp.CHECKPOINT_FREQ is not None:
+                if (epoch + 1) % cp.CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
+                    checkpoint = {
+                        "state_dict": model.state_dict(),
+                        "optimizer": cp.OPTIMIZER.state_dict(),
+                    }
+                    utils.save_checkpoint(
+                        state=checkpoint,
+                        target_dir=cp.SAVE_MODEL_DIR,
+                        model_name=cp.SAVE_MODEL_NAME,
+                    )
+
+            # Print out epoch number, loss and performance for this epoch
+            print(
+                f"Epoch: {epoch + 1} | "
+                f"train_loss: {train_loss:.4f} | "
+                f"train_perform: {train_perform:.4f} | "
+                f"test_loss: {test_loss:.4f} | "
+                f"test_perform: {test_perform:.4f}"
+            )
+
+            # Update results dictionary
+            results["epoch"].append(epoch + 1)
+            results["train_loss"].append(train_loss)
+            results["train_perform"].append(train_perform)
+            results["test_loss"].append(test_loss)
+            results["test_perform"].append(test_perform)
+
+        # Save the model with help from utils.py
+        if cp.CHECKPOINT_FREQ is None:
+            final_state = {
+                "state_dict": model.state_dict(),
+                "optimizer": cp.OPTIMIZER.state_dict(),
+            }
+            utils.save_checkpoint(
+                state=final_state,
+                target_dir=cp.SAVE_MODEL_DIR,
+                model_name=cp.SAVE_MODEL_NAME,
+            )
+        elif (
+            cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
+        ):  # Don't save when final epoch was checkpoint
+            final_state = {
+                "state_dict": model.state_dict(),
+                "optimizer": cp.OPTIMIZER.state_dict(),
+            }
+            utils.save_checkpoint(
+                state=final_state,
+                target_dir=cp.SAVE_MODEL_DIR,
+                model_name=cp.SAVE_MODEL_NAME,
+            )
+
+        # Save loss and performance during training
+        utils.save_train_results(
+            dict_results=results,
+            target_dir=cp.SAVE_MODEL_DIR,
+            filename=f"results_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.tsv",
         )
 
-        # Checkpoint model at a given frequency if requested
-        if cp.CHECKPOINT_FREQ is not None:
-            if (epoch + 1) % cp.CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
-                checkpoint = {
+        # Save a torchinfo summary of the network
+        utils.save_network_summary(
+            model=model,
+            target_dir=cp.SAVE_MODEL_DIR,
+            filename=f"summary_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.txt",
+            n_channels=cp.N_CHANNELS,
+        )
+
+        # Save the config
+        utils.save_config(
+            target_dir=cp.SAVE_MODEL_DIR,
+            filename=f"config_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.json",
+        )
+
+    # Perform K-fold cross validaton
+    else:
+        print(f"[INFO performing {cp.KFOLD}-fold cross-validation]")
+
+        # Setup tqdm loop for progrss bar over K-folds
+        kfold_loop = tqdm(loaders, desc="Cross Validation Folds")
+        for fold, (train_loader, test_loader) in enumerate(kfold_loop):
+            # Setup tqdm loop for progress bar over epochs
+            epoch_loop = tqdm(range(cp.NUM_EPOCHS), desc="Epochs")
+            for epoch in epoch_loop:
+                train_loss, train_perform = engine.train_step(
+                    model=model,
+                    dataloader=train_loader,
+                    loss_fn=cp.LOSS_FN,
+                    performance_fn=cp.PERFORMANCE_FN,
+                    optimizer=cp.OPTIMIZER,
+                    scaler=cp.SCALER,
+                    device=cp.DEVICE,
+                )
+                test_loss, test_perform = engine.test_step(
+                    model=model,
+                    dataloader=test_loader,
+                    loss_fn=cp.LOSS_FN,
+                    performance_fn=cp.PERFORMANCE_FN,
+                    device=cp.DEVICE,
+                )
+
+                # Checkpoint model at a given frequency if requested
+                if cp.CHECKPOINT_FREQ is not None:
+                    if (
+                        epoch + 1
+                    ) % cp.CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
+                        checkpoint = {
+                            "state_dict": model.state_dict(),
+                            "optimizer": cp.OPTIMIZER.state_dict(),
+                        }
+                        utils.save_checkpoint(
+                            state=checkpoint,
+                            target_dir=cp.SAVE_MODEL_DIR,
+                            model_name=cp.SAVE_MODEL_NAME + f"_fold{fold + 1}",
+                        )
+
+                # Print out epoch number, loss and performance for this epoch
+                print(
+                    f"Epoch: {epoch + 1} | "
+                    f"train_loss: {train_loss:.4f} | "
+                    f"train_perform: {train_perform:.4f} | "
+                    f"test_loss: {test_loss:.4f} | "
+                    f"test_perform: {test_perform:.4f}"
+                )
+
+                # Update results dictionary
+                results["epoch"].append(epoch + 1)
+                results["train_loss"].append(train_loss)
+                results["train_perform"].append(train_perform)
+                results["test_loss"].append(test_loss)
+                results["test_perform"].append(test_perform)
+
+            # Save the model with help from utils.py
+            if cp.CHECKPOINT_FREQ is None:
+                final_state = {
                     "state_dict": model.state_dict(),
                     "optimizer": cp.OPTIMIZER.state_dict(),
                 }
                 utils.save_checkpoint(
-                    state=checkpoint,
+                    state=final_state,
                     target_dir=cp.SAVE_MODEL_DIR,
-                    model_name=cp.SAVE_MODEL_NAME,
+                    model_name=cp.SAVE_MODEL_NAME + f"_fold{fold + 1}",
+                )
+            elif (
+                cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
+            ):  # Don't save when final epoch was checkpoint
+                final_state = {
+                    "state_dict": model.state_dict(),
+                    "optimizer": cp.OPTIMIZER.state_dict(),
+                }
+                utils.save_checkpoint(
+                    state=final_state,
+                    target_dir=cp.SAVE_MODEL_DIR,
+                    model_name=cp.SAVE_MODEL_NAME + f"_fold{fold + 1}",
                 )
 
-        # Print out epoch number, loss and performance for this epoch
-        print(
-            f"Epoch: {epoch + 1} | "
-            f"train_loss: {train_loss:.4f} | "
-            f"train_perform: {train_perform:.4f} | "
-            f"test_loss: {test_loss:.4f} | "
-            f"test_perform: {test_perform:.4f}"
-        )
+            # Save loss and performance during training
+            utils.save_train_results(
+                dict_results=results,
+                target_dir=cp.SAVE_MODEL_DIR,
+                filename=f"results_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}_fold{fold + 1}.tsv",
+            )
 
-        # Update results dictionary
-        results["epoch"].append(epoch + 1)
-        results["train_loss"].append(train_loss)
-        results["train_perform"].append(train_perform)
-        results["test_loss"].append(test_loss)
-        results["test_perform"].append(test_perform)
+            # Save a torchinfo summary of the network
+            utils.save_network_summary(
+                model=model,
+                target_dir=cp.SAVE_MODEL_DIR,
+                filename=f"summary_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}_fold{fold + 1}.txt",
+                n_channels=cp.N_CHANNELS,
+            )
 
-    # Save the model with help from utils.py
-    if cp.CHECKPOINT_FREQ is None:
-        final_state = {
-            "state_dict": model.state_dict(),
-            "optimizer": cp.OPTIMIZER.state_dict(),
-        }
-        utils.save_checkpoint(
-            state=final_state,
-            target_dir=cp.SAVE_MODEL_DIR,
-            model_name=cp.SAVE_MODEL_NAME,
-        )
-    elif (
-        cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
-    ):  # Don't save when final epoch was checkpoint
-        final_state = {
-            "state_dict": model.state_dict(),
-            "optimizer": cp.OPTIMIZER.state_dict(),
-        }
-        utils.save_checkpoint(
-            state=final_state,
-            target_dir=cp.SAVE_MODEL_DIR,
-            model_name=cp.SAVE_MODEL_NAME,
-        )
+            # Save the config
+            utils.save_config(
+                target_dir=cp.SAVE_MODEL_DIR,
+                filename=f"config_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}_fold{fold + 1}.json",
+            )
 
-    # Save loss and performance during training
-    utils.save_train_results(
-        dict_results=results,
-        target_dir=cp.SAVE_MODEL_DIR,
-        filename=f"results_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.tsv",
-    )
+            print(f"[INFO] Fold {fold + 1} finished!")
 
-    # Save a torchinfo summary of the network
-    utils.save_network_summary(
-        model=model,
-        target_dir=cp.SAVE_MODEL_DIR,
-        filename=f"summary_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.txt",
-        n_channels=cp.N_CHANNELS,
-    )
+            # Re-initialize model, optimizers and results logger for next fold
+            if (fold + 1) < cp.KFOLD:
+                # Re-initialize model for next fold with help from model_builder.py and send to device
+                model = cp.MODEL_TYPE(
+                    model_name=cp.MODEL_NAME,
+                    encoder_name=cp.ENCODER_NAME,
+                    encoder_weights=cp.ENCODER_WEIGHTS,
+                    n_channels=cp.N_CHANNELS,
+                    n_classes=cp.N_CLASSES,
+                    decoder_attention=cp.DECODER_ATTENTION,
+                    encoder_freeze=cp.ENCODER_FREEZE,
+                    fusion=cp.FUSION,
+                    n_channels_med1=cp.N_CHANNELS_MED1,
+                    n_channels_med2=cp.N_CHANNELS_MED2,
+                )
+                if cp.MULTI_GPU:
+                    model = nn.DataParallel(model)
+                model = model.to(cp.DEVICE)
 
-    # Save the config
-    utils.save_config(
-        target_dir=cp.SAVE_MODEL_DIR,
-        filename=f"config_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.json",
-    )
+                # Load model again for next fold if requested
+                if cp.LOAD_MODEL == True:
+                    utils.load_checkpoint(checkpoint=cp.LOAD_MODEL_PATH, model=model)
+
+                # Prepare optimizer again for next fold
+                cp.OPTIMIZER = cp.OPTIMIZER(
+                    params=model.parameters(), lr=cp.LEARNING_RATE
+                )
+
+                # Create empty results dictionary for loss and performance during training loop for next fold
+                results = {
+                    "epoch": [],
+                    "train_loss": [],
+                    "train_perform": [],
+                    "test_loss": [],
+                    "test_perform": [],
+                }
+
+                print(
+                    f"[INFO] Re-initialized model, optimizer and results logger for fold {fold + 2}!"
+                )
 
 
 if __name__ == "__main__":
