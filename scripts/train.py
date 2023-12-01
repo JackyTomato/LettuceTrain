@@ -142,7 +142,7 @@ def main():
         utils.load_checkpoint(checkpoint=cp.LOAD_MODEL_PATH, model=model)
 
     # Prepare optimizer
-    cp.OPTIMIZER = cp.OPTIMIZER(params=model.parameters(), lr=cp.LEARNING_RATE)
+    optimizer = cp.OPTIMIZER(params=model.parameters(), lr=cp.LEARNING_RATE)
 
     # Create empty results dictionary for loss and performance during training loop
     results = {
@@ -166,7 +166,7 @@ def main():
                 dataloader=train_loader,
                 loss_fn=cp.LOSS_FN,
                 performance_fn=cp.PERFORMANCE_FN,
-                optimizer=cp.OPTIMIZER,
+                optimizer=optimizer,
                 scaler=cp.SCALER,
                 device=cp.DEVICE,
             )
@@ -183,7 +183,7 @@ def main():
                 if (epoch + 1) % cp.CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
                     checkpoint = {
                         "state_dict": model.state_dict(),
-                        "optimizer": cp.OPTIMIZER.state_dict(),
+                        "optimizer": optimizer.state_dict(),
                     }
                     utils.save_checkpoint(
                         state=checkpoint,
@@ -211,7 +211,7 @@ def main():
         if cp.CHECKPOINT_FREQ is None:
             final_state = {
                 "state_dict": model.state_dict(),
-                "optimizer": cp.OPTIMIZER.state_dict(),
+                "optimizer": optimizer.state_dict(),
             }
             utils.save_checkpoint(
                 state=final_state,
@@ -223,7 +223,7 @@ def main():
         ):  # Don't save when final epoch was checkpoint
             final_state = {
                 "state_dict": model.state_dict(),
-                "optimizer": cp.OPTIMIZER.state_dict(),
+                "optimizer": optimizer.state_dict(),
             }
             utils.save_checkpoint(
                 state=final_state,
@@ -273,7 +273,7 @@ def main():
                     dataloader=train_loader,
                     loss_fn=cp.LOSS_FN,
                     performance_fn=cp.PERFORMANCE_FN,
-                    optimizer=cp.OPTIMIZER,
+                    optimizer=optimizer,
                     scaler=cp.SCALER,
                     device=cp.DEVICE,
                 )
@@ -292,7 +292,7 @@ def main():
                     ) % cp.CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
                         checkpoint = {
                             "state_dict": model.state_dict(),
-                            "optimizer": cp.OPTIMIZER.state_dict(),
+                            "optimizer": optimizer.state_dict(),
                         }
                         utils.save_checkpoint(
                             state=checkpoint,
@@ -320,7 +320,7 @@ def main():
             if cp.CHECKPOINT_FREQ is None:
                 final_state = {
                     "state_dict": model.state_dict(),
-                    "optimizer": cp.OPTIMIZER.state_dict(),
+                    "optimizer": optimizer.state_dict(),
                 }
                 utils.save_checkpoint(
                     state=final_state,
@@ -332,7 +332,7 @@ def main():
             ):  # Don't save when final epoch was checkpoint
                 final_state = {
                     "state_dict": model.state_dict(),
-                    "optimizer": cp.OPTIMIZER.state_dict(),
+                    "optimizer": optimizer.state_dict(),
                 }
                 utils.save_checkpoint(
                     state=final_state,
@@ -387,9 +387,7 @@ def main():
                     utils.load_checkpoint(checkpoint=cp.LOAD_MODEL_PATH, model=model)
 
                 # Prepare optimizer again for next fold
-                cp.OPTIMIZER = cp.OPTIMIZER(
-                    params=model.parameters(), lr=cp.LEARNING_RATE
-                )
+                optimizer = cp.OPTIMIZER(params=model.parameters(), lr=cp.LEARNING_RATE)
 
                 # Create empty results dictionary for loss and performance during training loop for next fold
                 results = {
