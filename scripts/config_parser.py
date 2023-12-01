@@ -63,6 +63,9 @@ FUSION = _config_dict["FUSION"]
 if FUSION == "None":
     FUSION = eval(FUSION)  # In case of no fusion
 TRAIN_FRAC = _config_dict["TRAIN_FRAC"]
+KFOLD = _config_dict["KFOLD"]
+if KFOLD == "None":
+    KFOLD = eval(KFOLD)  # In case of no K-fold cross validation
 TRAIN_TRANSFORMS = A.Compose([eval(_tf) for _tf in _config_dict["TRAIN_TRANSFORMS"]])
 TEST_TRANSFORMS = A.Compose([eval(_tf) for _tf in _config_dict["TEST_TRANSFORMS"]])
 BATCH_SIZE = _config_dict["BATCH_SIZE"]
