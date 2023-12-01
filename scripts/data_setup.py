@@ -125,8 +125,8 @@ class LettuceSegDataset(Dataset):
                 fvfm_path = os.path.join(fvfm_dir, fvfm_name)
                 fvfm_paths.append(fvfm_path)
 
-        # Split into train and test sets if desired
-        if train_frac < 1:
+        # Split into train and test sets if desired when not doing K-fold cross validation
+        if (train_frac < 1) and (kfold is None):
             if (fm_dir is None) and (fvfm_dir is None):
                 split = train_test_split(
                     img_paths,
@@ -201,7 +201,7 @@ class LettuceSegDataset(Dataset):
                     self.mask_paths = split[7]
 
         # Don't split when training fraction is 1 or when doing K-fold cross validation
-        elif (train_frac == 1) or (kfold is not None):
+        else:
             self.img_paths = img_paths
             self.mask_paths = mask_paths
             if fm_dir is not None:
