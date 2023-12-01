@@ -365,23 +365,36 @@ def get_loaders(
 
     # Create dataloaders for each split of K-fold cross validation
     else:
+        # Get full to be split into K-folds dataset
+        full_ds = dataset(
+            img_dir=img_dir,
+            label_dir=label_dir,
+            train_frac=train_frac,
+            kfold=kfold,
+            fm_dir=fm_dir,
+            fvfm_dir=fvfm_dir,
+            is_train=True,
+            transform=train_augs,
+            seed=seed,
+        )
+
         # Create generator of train and set indices for each fold
         kfolder = KFold(n_splits=kfold, shuffle=True, random_state=seed)
-        inds_kfold = kfolder.split(dataset)
+        inds_kfold = kfolder.split(full_ds)
 
         # Create list of train and test DataLoader objects
         loaders = []
         for train_inds, test_inds in inds_kfold:
             # Create DataLoaders for current fold and add to list
             train_loader = DataLoader(
-                train_ds,
+                full_ds,
                 batch_size=batch_size,
                 num_workers=num_workers,
                 pin_memory=pin_memory,
                 sampler=train_inds,
             )
             test_loader = DataLoader(
-                test_ds,
+                full_ds,
                 batch_size=batch_size,
                 num_workers=num_workers,
                 pin_memory=pin_memory,
