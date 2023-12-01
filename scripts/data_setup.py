@@ -30,6 +30,7 @@ class LettuceSegDataset(Dataset):
         fm_dir=None,
         fvfm_dir=None,
         train_frac=0.75,
+        kfold=None,
         transform=None,
         seed=42,
         give_name=False,
@@ -43,6 +44,10 @@ class LettuceSegDataset(Dataset):
         Fm and FvFm images can be included as additional input. The Fm and FvFm are stacked
         with the RGB images as additional channels.
 
+        Allows for a training fraction of 1, in that case the whole dataset is provided.
+        When doing K-fold cross valiation, the whole dataset is also provided,
+        as the split will be performed downstream.
+
         Args:
             img_dir (str): Filepath of directory containing the images.
             label_dir (str): Filepath of directory  containing the segmentation masks.
@@ -50,6 +55,7 @@ class LettuceSegDataset(Dataset):
             fm_dir (str, optional): Filepath of directory containing Fm images for fusion. Defaults to None.
             fvfm_dir (str, optional): Filepath of directory containing FvFm images for fusion. Defaults to None.
             train_frac (float, optional): Fraction of data that is train. Defaults to 0.75.
+            kfold (int, optional): K for K-fold cross validation. If not None, train_frac is ignored. Defaults to None.
             transform (albumentations.Compose, optional): Transformations for data aug. Defaults to None.
             seed (int, optional): Seed for reproducible train test split of data. Defaults to 42.
             give_name (bool, optional): If True, dataset also provides image name.
@@ -193,7 +199,9 @@ class LettuceSegDataset(Dataset):
                     self.fm_paths = split[3]
                     self.fvfm_paths = split[5]
                     self.mask_paths = split[7]
-        else:
+
+        # Don't split when training fraction is 1 or when doing K-fold cross validation
+        elif (train_frac == 1) or (kfold is not None):
             self.img_paths = img_paths
             self.mask_paths = mask_paths
             if fm_dir is not None:
