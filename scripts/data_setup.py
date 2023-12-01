@@ -366,7 +366,7 @@ def get_loaders(
     # Create dataloaders for each split of K-fold cross validation
     else:
         # Create generator of train and set indices for each fold
-        kfolder = KFold(n_splits=kfold, shuffe=True, random_state=seed)
+        kfolder = KFold(n_splits=kfold, shuffle=True, random_state=seed)
         inds_kfold = kfolder.split(dataset)
 
         # Create list of train and test DataLoader objects
