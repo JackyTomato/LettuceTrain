@@ -254,7 +254,7 @@ def main():
 
     # Perform K-fold cross validaton
     else:
-        print(f"[INFO] Performing {cp.KFOLD}-fold cross-validation]")
+        print(f"[INFO] Performing {cp.KFOLD}-fold cross-validation")
 
         # Setup tqdm loop for progrss bar over K-folds
         kfold_loop = tqdm(loaders, desc="Cross Validation Folds")
