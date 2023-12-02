@@ -80,6 +80,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import random
+import gc
 from tqdm import tqdm
 
 # Import supporting modules
@@ -365,6 +366,12 @@ def main():
 
             # Re-initialize model, optimizers and results logger for next fold
             if (fold + 1) < cp.KFOLD:
+                # Clean up old objects and free up GPU memory
+                del model, optimizer, results
+                gc.collect()
+                if cp.DEVICE == "cuda":
+                    torch.cuda.empty_cache()
+
                 # Re-initialize model for next fold with help from model_builder.py and send to device
                 model = cp.MODEL_TYPE(
                     model_name=cp.MODEL_NAME,
