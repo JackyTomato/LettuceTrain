@@ -1,0 +1,13 @@
+*.pyc
+*.out
+data/*
+output/*
+inference/*
+graveyard.py
+scripts/config.json
+scripts/first_nohup.txt
+scripts/nohup.out
+scripts/skipped_images.txt
+scripts/crop_traintest.out
+scripts/UnetMit_ep100.out
+scripts/transfer_traintest.py
