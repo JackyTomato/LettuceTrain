@@ -203,13 +203,14 @@ class LettuceSegNoLabelDataset(Dataset):
 def main():
     # Set globals and directories
     MULTI_GPU = True
-    PERFORM_FN = utils.binary_jaccard
-    RGB_ALPHA = True
+    PERFORM_FN = None
+    RGB_ALPHA = False
 
-    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined"
-    label_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/stitched_tb_masks_combined"
-    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_tb-rgb_masks_combined"
-    perform_save_name = "TrainTest_tipburn_tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.tsv"
+    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/UnetMit-b3_lr1e-4_Ldice_ep100_bg-rgb_masks"
+    label_dir = None
+    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/UnetMit-b3_lr1e-4_Ldice_ep100_tb-bin_masks"
+    savename_appendix = "_UnetMit-b3_lr1e-4_Ldice_ep100_tb_mask.png"
+    perform_save_name = None
 
     transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
@@ -272,7 +273,7 @@ def main():
                     output_masks, input_imgs, filenames, performs
                 ):
                     # Adjust mask before saving
-                    if RGB_ALPHA is not None:
+                    if RGB_ALPHA:
                         # Apply predicted mask on input image
                         masked_img = draw_segmentation_masks(
                             input_img, ~output_mask, alpha=0.7
@@ -287,7 +288,7 @@ def main():
                         masked_img = util.img_as_ubyte(masked_img)
 
                     # Save image
-                    new_name = f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png"
+                    new_name = f"{filename.split(os.extsep)[0]}{savename_appendix}"
                     utils.save_img(masked_img, target_dir=target_dir, filename=new_name)
 
                     # Write performance to tsv file
@@ -338,10 +339,10 @@ def main():
                 output_masks, input_imgs, filenames
             ):
                 # Adjust mask before saving
-                if RGB_ALPHA is not None:
+                if RGB_ALPHA:
                     # Apply predicted mask on input image
                     masked_img = draw_segmentation_masks(
-                        input_img, ~output_mask, alpha=0.7
+                        input_img, ~output_mask, alpha=1
                     )
                     masked_img = masked_img.detach()
                     masked_img = F.to_pil_image(masked_img)
@@ -352,9 +353,9 @@ def main():
                     masked_img = masked_img.cpu().numpy()
                     masked_img = util.img_as_ubyte(masked_img)
 
-                    # Save image
-                    new_name = f"{filename.split(os.extsep)[0]}_UnetMit-b3_tb_mask.png"
-                    utils.save_img(masked_img, target_dir=target_dir, filename=new_name)
+                # Save image
+                new_name = f"{filename.split(os.extsep)[0]}{savename_appendix}"
+                utils.save_img(masked_img, target_dir=target_dir, filename=new_name)
 
 
 if __name__ == "__main__":
