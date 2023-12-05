@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 Runs inference of models. Script can save results and corresponding performance.
+
+TODO:
+    - Remove convoluted method of sending model & data to device as normal method works now
 """
 
 # Import statements
