@@ -3,6 +3,8 @@
 data/*
 output/*
 inference/*
+scripts/build*
+scripts/dist*
 graveyard.py
 scripts/config.json
 scripts/first_nohup.txt
@@ -12,3 +14,4 @@ scripts/crop_traintest.out
 scripts/UnetMit_ep100.out
 scripts/transfer_traintest.py
 scripts/run_segmodel.py
+scripts/run_segmodel.spec
