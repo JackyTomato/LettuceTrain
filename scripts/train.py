@@ -101,165 +101,257 @@ def main():
     random.seed(cp.SEED)
     np.random.seed(cp.SEED)
 
-    # Create DataLoaders with help from data_setup.py
-    loaders = data_setup.get_loaders(
-        dataset=cp.DATASET,
-        img_dir=cp.IMG_DIR,
-        label_dir=cp.LABEL_DIR,
-        fm_dir=cp.FM_DIR,
-        fvfm_dir=cp.FVFM_DIR,
-        train_frac=cp.TRAIN_FRAC,
-        kfold=cp.KFOLD,
-        train_augs=cp.TRAIN_TRANSFORMS,
-        test_augs=cp.TEST_TRANSFORMS,
-        batch_size=cp.BATCH_SIZE,
-        num_workers=cp.NUM_WORKERS,
-        pin_memory=cp.PIN_MEMORY,
-        seed=cp.SEED,
-    )
-    print("[INFO] Data succesfully loaded!")
-
-    # Create model with help from model_builder.py and send to device
-    model = cp.MODEL_TYPE(
-        model_name=cp.MODEL_NAME,
-        encoder_name=cp.ENCODER_NAME,
-        encoder_weights=cp.ENCODER_WEIGHTS,
-        n_channels=cp.N_CHANNELS,
-        n_classes=cp.N_CLASSES,
-        decoder_attention=cp.DECODER_ATTENTION,
-        encoder_freeze=cp.ENCODER_FREEZE,
-        fusion=cp.FUSION,
-        n_channels_med1=cp.N_CHANNELS_MED1,
-        n_channels_med2=cp.N_CHANNELS_MED2,
-    )
-    if cp.MULTI_GPU:
-        model = nn.DataParallel(model)
-    model = model.to(cp.DEVICE)
-    print("[INFO] Model initialized!")
-
-    # Start training with help from engine.py
-    # Load model if requested
-    if cp.LOAD_MODEL == True:
-        utils.load_checkpoint(checkpoint=cp.LOAD_MODEL_PATH, model=model)
-
-    # Prepare optimizer
-    optimizer = cp.OPTIMIZER(params=model.parameters(), lr=cp.LEARNING_RATE)
-
-    # Create empty results dictionary for loss and performance during training loop
-    results = {
-        "epoch": [],
-        "train_loss": [],
-        "train_perform": [],
-        "test_loss": [],
-        "test_perform": [],
-    }
-
     # Normal training, no K-fold cross validation
     if cp.KFOLD is None:
-        # Prepare loaders for loop over epochs
-        train_loader, test_loader = loaders
-
-        # Setup tqdm loop for progress bar over epochs
-        epoch_loop = tqdm(range(cp.NUM_EPOCHS), desc="Epochs")
-        for epoch in epoch_loop:
-            train_loss, train_perform = engine.train_step(
-                model=model,
-                dataloader=train_loader,
-                loss_fn=cp.LOSS_FN,
-                performance_fn=cp.PERFORMANCE_FN,
-                optimizer=optimizer,
-                scaler=cp.SCALER,
-                device=cp.DEVICE,
-            )
-            test_loss, test_perform = engine.test_step(
-                model=model,
-                dataloader=test_loader,
-                loss_fn=cp.LOSS_FN,
-                performance_fn=cp.PERFORMANCE_FN,
-                device=cp.DEVICE,
-            )
-
-            # Checkpoint model at a given frequency if requested
-            if cp.CHECKPOINT_FREQ is not None:
-                if (epoch + 1) % cp.CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
-                    checkpoint = {
-                        "state_dict": model.state_dict(),
-                        "optimizer": optimizer.state_dict(),
-                    }
-                    utils.save_checkpoint(
-                        state=checkpoint,
-                        target_dir=cp.SAVE_MODEL_DIR,
-                        model_name=cp.SAVE_MODEL_NAME,
+        # Setup tqdm loop for progress bar over trainset size testing runs with multiple training fractions
+        if len(cp.TRAIN_FRAC) > 1:
+            train_frac_loop = tqdm(cp.TRAIN_FRAC, desc="Trainset size testing runs")
+        else:
+            train_frac_loop = cp.TRAIN_FRAC
+        for run, train_frac in enumerate(train_frac_loop):
+            # Add train fraction to model save name when performing trainset size testing
+            # Also announce trainset size testing
+            if len(cp.TRAIN_FRAC) > 1:
+                save_model_name = f"{cp.SAVE_MODEL_NAME}_frac{train_frac}"
+                if run == 0:
+                    print(
+                        f"[INFO] Performing trainset size testing with {len(cp.TRAIN_FRAC)} training fractions!"
                     )
-
-            # Print out epoch number, loss and performance for this epoch
-            print(
-                f"Epoch: {epoch + 1} | "
-                f"train_loss: {train_loss:.4f} | "
-                f"train_perform: {train_perform:.4f} | "
-                f"test_loss: {test_loss:.4f} | "
-                f"test_perform: {test_perform:.4f}"
+            else:
+                save_model_name = cp.SAVE_MODEL_NAME
+            # Create DataLoaders with help from data_setup.py
+            loaders = data_setup.get_loaders(
+                dataset=cp.DATASET,
+                img_dir=cp.IMG_DIR,
+                label_dir=cp.LABEL_DIR,
+                fm_dir=cp.FM_DIR,
+                fvfm_dir=cp.FVFM_DIR,
+                train_frac=train_frac,
+                kfold=cp.KFOLD,
+                train_augs=cp.TRAIN_TRANSFORMS,
+                test_augs=cp.TEST_TRANSFORMS,
+                batch_size=cp.BATCH_SIZE,
+                num_workers=cp.NUM_WORKERS,
+                pin_memory=cp.PIN_MEMORY,
+                seed=cp.SEED,
             )
+            print("[INFO] Data succesfully loaded!")
 
-            # Update results dictionary
-            results["epoch"].append(epoch + 1)
-            results["train_loss"].append(train_loss)
-            results["train_perform"].append(train_perform)
-            results["test_loss"].append(test_loss)
-            results["test_perform"].append(test_perform)
+            # Clean up old objects and free up GPU memory if not first run
+            if run > 0:
+                del model, optimizer, results
+                gc.collect()
+                if cp.DEVICE == "cuda":
+                    torch.cuda.empty_cache()
+                print(
+                    f"[INFO] Re-initializing model, optimizer and results logger for run {run + 1}, with training fraction: {train_frac}!"
+                )
 
-        # Save the model with help from utils.py
-        if cp.CHECKPOINT_FREQ is None:
-            final_state = {
-                "state_dict": model.state_dict(),
-                "optimizer": optimizer.state_dict(),
+            # (Re-)initialize model for next fold with help from model_builder.py and send to device
+            model = cp.MODEL_TYPE(
+                model_name=cp.MODEL_NAME,
+                encoder_name=cp.ENCODER_NAME,
+                encoder_weights=cp.ENCODER_WEIGHTS,
+                n_channels=cp.N_CHANNELS,
+                n_classes=cp.N_CLASSES,
+                decoder_attention=cp.DECODER_ATTENTION,
+                encoder_freeze=cp.ENCODER_FREEZE,
+                fusion=cp.FUSION,
+                n_channels_med1=cp.N_CHANNELS_MED1,
+                n_channels_med2=cp.N_CHANNELS_MED2,
+            )
+            if cp.MULTI_GPU:
+                model = nn.DataParallel(model)
+            model = model.to(cp.DEVICE)
+
+            # Load model if requested
+            if cp.LOAD_MODEL == True:
+                utils.load_checkpoint(checkpoint=cp.LOAD_MODEL_PATH, model=model)
+
+            # Prepare optimizer
+            optimizer = cp.OPTIMIZER(params=model.parameters(), lr=cp.LEARNING_RATE)
+
+            # Create empty results dictionary for loss and performance during training loop
+            results = {
+                "epoch": [],
+                "train_loss": [],
+                "train_perform": [],
+                "test_loss": [],
+                "test_perform": [],
             }
-            utils.save_checkpoint(
-                state=final_state,
+
+            # Prepare loaders for loop over epochs without K-fold CV
+            train_loader, test_loader = loaders
+
+            # Setup tqdm loop for progress bar over epochs
+            epoch_loop = tqdm(range(cp.NUM_EPOCHS), desc="Epochs")
+            for epoch in epoch_loop:
+                train_loss, train_perform = engine.train_step(
+                    model=model,
+                    dataloader=train_loader,
+                    loss_fn=cp.LOSS_FN,
+                    performance_fn=cp.PERFORMANCE_FN,
+                    optimizer=optimizer,
+                    scaler=cp.SCALER,
+                    device=cp.DEVICE,
+                )
+                test_loss, test_perform = engine.test_step(
+                    model=model,
+                    dataloader=test_loader,
+                    loss_fn=cp.LOSS_FN,
+                    performance_fn=cp.PERFORMANCE_FN,
+                    device=cp.DEVICE,
+                )
+
+                # Checkpoint model at a given frequency if requested
+                if cp.CHECKPOINT_FREQ is not None:
+                    if (
+                        epoch + 1
+                    ) % cp.CHECKPOINT_FREQ == 0:  # Current epoch is epoch + 1
+                        checkpoint = {
+                            "state_dict": model.state_dict(),
+                            "optimizer": optimizer.state_dict(),
+                        }
+                        utils.save_checkpoint(
+                            state=checkpoint,
+                            target_dir=cp.SAVE_MODEL_DIR,
+                            model_name=save_model_name,
+                        )
+
+                # Print out epoch number, loss and performance for this epoch
+                print(
+                    f"Epoch: {epoch + 1} | "
+                    f"train_loss: {train_loss:.4f} | "
+                    f"train_perform: {train_perform:.4f} | "
+                    f"test_loss: {test_loss:.4f} | "
+                    f"test_perform: {test_perform:.4f}"
+                )
+
+                # Update results dictionary
+                results["epoch"].append(epoch + 1)
+                results["train_loss"].append(train_loss)
+                results["train_perform"].append(train_perform)
+                results["test_loss"].append(test_loss)
+                results["test_perform"].append(test_perform)
+
+            # Save the model with help from utils.py
+            if cp.CHECKPOINT_FREQ is None:
+                final_state = {
+                    "state_dict": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                }
+                utils.save_checkpoint(
+                    state=final_state,
+                    target_dir=cp.SAVE_MODEL_DIR,
+                    model_name=save_model_name,
+                )
+            elif (
+                cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
+            ):  # Don't save when final epoch was checkpoint
+                final_state = {
+                    "state_dict": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                }
+                utils.save_checkpoint(
+                    state=final_state,
+                    target_dir=cp.SAVE_MODEL_DIR,
+                    model_name=save_model_name,
+                )
+
+            # Save loss and performance during training
+            utils.save_train_results(
+                dict_results=results,
                 target_dir=cp.SAVE_MODEL_DIR,
-                model_name=cp.SAVE_MODEL_NAME,
+                filename=f"results_{save_model_name.split(os.extsep)[0]}.tsv",
             )
-        elif (
-            cp.NUM_EPOCHS % cp.CHECKPOINT_FREQ != 0
-        ):  # Don't save when final epoch was checkpoint
-            final_state = {
-                "state_dict": model.state_dict(),
-                "optimizer": optimizer.state_dict(),
-            }
-            utils.save_checkpoint(
-                state=final_state,
+
+            # Save a torchinfo summary of the network
+            utils.save_network_summary(
+                model=model,
                 target_dir=cp.SAVE_MODEL_DIR,
-                model_name=cp.SAVE_MODEL_NAME,
+                filename=f"summary_{save_model_name.split(os.extsep)[0]}.txt",
+                n_channels=cp.N_CHANNELS,
             )
 
-        # Save loss and performance during training
-        utils.save_train_results(
-            dict_results=results,
-            target_dir=cp.SAVE_MODEL_DIR,
-            filename=f"results_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.tsv",
-        )
+            # Save the config
+            utils.save_config(
+                target_dir=cp.SAVE_MODEL_DIR,
+                filename=f"config_{save_model_name.split(os.extsep)[0]}.json",
+            )
 
-        # Save a torchinfo summary of the network
-        utils.save_network_summary(
-            model=model,
-            target_dir=cp.SAVE_MODEL_DIR,
-            filename=f"summary_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.txt",
-            n_channels=cp.N_CHANNELS,
-        )
-
-        # Save the config
-        utils.save_config(
-            target_dir=cp.SAVE_MODEL_DIR,
-            filename=f"config_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.json",
-        )
+            if len(cp.TRAIN_FRAC) > 1:
+                print(
+                    f"[INFO] Run {run + 1}, with training fraction {train_frac} finished!"
+                )
 
     # Perform K-fold cross validaton
     else:
         print(f"[INFO] Performing {cp.KFOLD}-fold cross-validation")
 
-        # Setup tqdm loop for progrss bar over K-folds
+        # Create DataLoaders with help from data_setup.py
+        loaders = data_setup.get_loaders(
+            dataset=cp.DATASET,
+            img_dir=cp.IMG_DIR,
+            label_dir=cp.LABEL_DIR,
+            fm_dir=cp.FM_DIR,
+            fvfm_dir=cp.FVFM_DIR,
+            train_frac=cp.TRAIN_FRAC,
+            kfold=cp.KFOLD,
+            train_augs=cp.TRAIN_TRANSFORMS,
+            test_augs=cp.TEST_TRANSFORMS,
+            batch_size=cp.BATCH_SIZE,
+            num_workers=cp.NUM_WORKERS,
+            pin_memory=cp.PIN_MEMORY,
+            seed=cp.SEED,
+        )
+        print("[INFO] Data succesfully loaded!")
+
+        # Setup tqdm loop for progress bar over K-folds
         kfold_loop = tqdm(loaders, desc="Cross Validation Folds")
         for fold, (train_loader, test_loader) in enumerate(kfold_loop):
+            # Clean up old objects and free up GPU memory if not first fold
+            if fold > 0:
+                del model, optimizer, results
+                gc.collect()
+                if cp.DEVICE == "cuda":
+                    torch.cuda.empty_cache()
+                print(
+                    f"[INFO] Re-initializing model, optimizer and results logger for fold {fold + 2}!"
+                )
+
+            # (Re-)initialize model for next fold with help from model_builder.py and send to device
+            model = cp.MODEL_TYPE(
+                model_name=cp.MODEL_NAME,
+                encoder_name=cp.ENCODER_NAME,
+                encoder_weights=cp.ENCODER_WEIGHTS,
+                n_channels=cp.N_CHANNELS,
+                n_classes=cp.N_CLASSES,
+                decoder_attention=cp.DECODER_ATTENTION,
+                encoder_freeze=cp.ENCODER_FREEZE,
+                fusion=cp.FUSION,
+                n_channels_med1=cp.N_CHANNELS_MED1,
+                n_channels_med2=cp.N_CHANNELS_MED2,
+            )
+            if cp.MULTI_GPU:
+                model = nn.DataParallel(model)
+            model = model.to(cp.DEVICE)
+
+            # Load model if requested
+            if cp.LOAD_MODEL == True:
+                utils.load_checkpoint(checkpoint=cp.LOAD_MODEL_PATH, model=model)
+
+            # Prepare optimizer
+            optimizer = cp.OPTIMIZER(params=model.parameters(), lr=cp.LEARNING_RATE)
+
+            # Create empty results dictionary for loss and performance during training loop
+            results = {
+                "epoch": [],
+                "train_loss": [],
+                "train_perform": [],
+                "test_loss": [],
+                "test_perform": [],
+            }
+
             # Create model save name
             model_name_split = cp.SAVE_MODEL_NAME.split(os.extsep, 1)
             model_new_name = (
@@ -363,51 +455,6 @@ def main():
             )
 
             print(f"[INFO] Fold {fold + 1} finished!")
-
-            # Re-initialize model, optimizers and results logger for next fold
-            if (fold + 1) < cp.KFOLD:
-                # Clean up old objects and free up GPU memory
-                del model, optimizer, results
-                gc.collect()
-                if cp.DEVICE == "cuda":
-                    torch.cuda.empty_cache()
-
-                # Re-initialize model for next fold with help from model_builder.py and send to device
-                model = cp.MODEL_TYPE(
-                    model_name=cp.MODEL_NAME,
-                    encoder_name=cp.ENCODER_NAME,
-                    encoder_weights=cp.ENCODER_WEIGHTS,
-                    n_channels=cp.N_CHANNELS,
-                    n_classes=cp.N_CLASSES,
-                    decoder_attention=cp.DECODER_ATTENTION,
-                    encoder_freeze=cp.ENCODER_FREEZE,
-                    fusion=cp.FUSION,
-                    n_channels_med1=cp.N_CHANNELS_MED1,
-                    n_channels_med2=cp.N_CHANNELS_MED2,
-                )
-                if cp.MULTI_GPU:
-                    model = nn.DataParallel(model)
-                model = model.to(cp.DEVICE)
-
-                # Load model again for next fold if requested
-                if cp.LOAD_MODEL == True:
-                    utils.load_checkpoint(checkpoint=cp.LOAD_MODEL_PATH, model=model)
-
-                # Prepare optimizer again for next fold
-                optimizer = cp.OPTIMIZER(params=model.parameters(), lr=cp.LEARNING_RATE)
-
-                # Create empty results dictionary for loss and performance during training loop for next fold
-                results = {
-                    "epoch": [],
-                    "train_loss": [],
-                    "train_perform": [],
-                    "test_loss": [],
-                    "test_perform": [],
-                }
-
-                print(
-                    f"[INFO] Re-initialized model, optimizer and results logger for fold {fold + 2}!"
-                )
 
 
 if __name__ == "__main__":
