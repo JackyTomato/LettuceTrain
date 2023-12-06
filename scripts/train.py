@@ -32,7 +32,7 @@ Example of config.json with brief explanations as comments:
     "DATA_CLASS": "data_setup.LettuceSegDataset", torch.utils.data.Dataset, PyTorch dataset class
     "IMG_DIR": "data/img", # str, filepath of dir containing the imaging data
     "LABEL_DIR": "data/label", # str, filepath of dir containing image labels
-    "TRAIN_FRAC": 0.75, # float, fraction of dataset to use for training
+    "TRAIN_FRAC": 0.75, # float, fraction of dataset to use for training or [0.4, 0.8] # list of floats, for trainset size testing
     "KFOLD" : 4, # int, K for K-fold cross validation
     "TRANSFORMS": [
         "A.Resize(height=512, width=512)",
@@ -112,7 +112,10 @@ def main():
             # Add train fraction to model save name when performing trainset size testing
             # Also announce trainset size testing
             if len(cp.TRAIN_FRAC) > 1:
-                save_model_name = f"{cp.SAVE_MODEL_NAME}_frac{train_frac}"
+                split_filename = cp.SAVE_MODEL_NAME.split(os.extsep, 1)
+                save_model_name = (
+                    f"{split_filename[0]}_frac{train_frac}.{split_filename[1]}"
+                )
                 if run == 0:
                     print(
                         f"[INFO] Performing trainset size testing with {len(cp.TRAIN_FRAC)} training fractions!"
