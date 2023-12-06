@@ -113,8 +113,9 @@ def main():
             # Also announce trainset size testing
             if len(cp.TRAIN_FRAC) > 1:
                 split_filename = cp.SAVE_MODEL_NAME.split(os.extsep, 1)
+                str_train_frac = str(train_frac).replace(".", "")
                 save_model_name = (
-                    f"{split_filename[0]}_frac{train_frac}.{split_filename[1]}"
+                    f"{split_filename[0]}_frac{str_train_frac}.{split_filename[1]}"
                 )
                 if run == 0:
                     print(
