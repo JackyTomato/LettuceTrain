@@ -291,7 +291,6 @@ class LettucePreTBClassDataset(Dataset):
     def __init__(
         self,
         img_dir,
-        label_dir,
         is_train,
         fm_dir=None,
         fvfm_dir=None,
@@ -316,7 +315,6 @@ class LettucePreTBClassDataset(Dataset):
 
         Args:
             img_dir (str): Filepath of directory containing the images.
-            label_dir (str): Filepath of directory  containing the segmentation masks.
             is_train (bool): If true, gives train data. If false, gives test data.
             fm_dir (str, optional): Filepath of directory containing Fm images for fusion. Defaults to None.
             fvfm_dir (str, optional): Filepath of directory containing FvFm images for fusion. Defaults to None.
@@ -339,13 +337,27 @@ class LettucePreTBClassDataset(Dataset):
         # Create lists of filepaths for images and corresponding list of labels
         img_paths = []
         labels = []
+        regex_exp = re.compile("^\d{2}")
+        regex_trayID = re.compile(".+Tray_(\d{2,})")
         for img_name in self.img_names:
             # List image name paths
             img_path = os.path.join(img_dir, img_name)
             img_paths.append(img_path)
             # List corresponding labels based on timepoint and trayID in filename
-
-        # Create corresponding list of pre-tipburn labels based on filename
+            match_exp = regex_exp.match(img_name)
+            exp = match_exp.group(1)
+            match_trayID = regex_trayID.match(img_name)
+            trayID = int(match_trayID.group(1))
+            if exp == 41:
+                if trayID > 80:
+                    label = 1
+                else:
+                    label = 0
+            elif exp == 51:
+                if trayID <= 80:
+                    label = 1
+                    label = 0
+            labels.append(label)
 
         # Also create lists of filepaths for Fm and FvFm if desired
         if fm_dir is not None:
@@ -364,7 +376,7 @@ class LettucePreTBClassDataset(Dataset):
             if (fm_dir is None) and (fvfm_dir is None):
                 split = train_test_split(
                     img_paths,
-                    mask_paths,
+                    labels,
                     train_size=train_frac,
                     random_state=seed,
                 )
@@ -372,15 +384,15 @@ class LettucePreTBClassDataset(Dataset):
                 # Give train or test data as requested
                 if is_train:
                     self.img_paths = split[0]
-                    self.mask_paths = split[2]
+                    self.labels = split[2]
                 else:
                     self.img_paths = split[1]
-                    self.mask_paths = split[3]
+                    self.labels = split[3]
             elif (fm_dir is not None) and (fvfm_dir is None):
                 split = train_test_split(
                     img_paths,
                     fm_paths,
-                    mask_paths,
+                    labels,
                     train_size=train_frac,
                     random_state=seed,
                 )
@@ -389,16 +401,16 @@ class LettucePreTBClassDataset(Dataset):
                 if is_train:
                     self.img_paths = split[0]
                     self.fm_paths = split[2]
-                    self.mask_paths = split[4]
+                    self.labels = split[4]
                 else:
                     self.img_paths = split[1]
                     self.fm_paths = split[3]
-                    self.mask_paths = split[5]
+                    self.labels = split[5]
             elif (fm_dir is None) and (fvfm_dir is not None):
                 split = train_test_split(
                     img_paths,
                     fvfm_paths,
-                    mask_paths,
+                    labels,
                     train_size=train_frac,
                     random_state=seed,
                 )
@@ -407,17 +419,17 @@ class LettucePreTBClassDataset(Dataset):
                 if is_train:
                     self.img_paths = split[0]
                     self.fvfm_paths = split[2]
-                    self.mask_paths = split[4]
+                    self.labels = split[4]
                 else:
                     self.img_paths = split[1]
                     self.fvfm_paths = split[3]
-                    self.mask_paths = split[5]
+                    self.labels = split[5]
             elif (fm_dir is not None) and (fvfm_dir is not None):
                 split = train_test_split(
                     img_paths,
                     fm_paths,
                     fvfm_paths,
-                    mask_paths,
+                    labels,
                     train_size=train_frac,
                     random_state=seed,
                 )
@@ -427,17 +439,17 @@ class LettucePreTBClassDataset(Dataset):
                     self.img_paths = split[0]
                     self.fm_paths = split[2]
                     self.fvfm_paths = split[4]
-                    self.mask_paths = split[6]
+                    self.labels = split[6]
                 else:
                     self.img_paths = split[1]
                     self.fm_paths = split[3]
                     self.fvfm_paths = split[5]
-                    self.mask_paths = split[7]
+                    self.labels = split[7]
 
         # Don't split when training fraction is 1 or when doing K-fold cross validation
         else:
             self.img_paths = img_paths
-            self.mask_paths = mask_paths
+            self.labels = labels
             if fm_dir is not None:
                 self.fm_paths = fm_paths
             if fvfm_dir is not None:
@@ -467,12 +479,10 @@ class LettucePreTBClassDataset(Dataset):
 
         # Retrieve mask, mask could be .json or an image format
         size = img.shape[:2]
-        if self.mask_paths[index].endswith(".json"):
-            mask = utils.binary_poly2px(self.mask_paths[index], custom_size=size)
-        elif self.mask_paths[index].endswith(
-            (".png", ".jpg", ".jpeg", ".tif", ".tiff")
-        ):
-            mask = np.array(Image.open(self.mask_paths[index]))
+        if self.labels[index].endswith(".json"):
+            mask = utils.binary_poly2px(self.labels[index], custom_size=size)
+        elif self.labels[index].endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff")):
+            mask = np.array(Image.open(self.labels[index]))
         else:
             mask = np.zeros(size, dtype=np.int32)  # Create empty mask for missing mask
         if 255.0 in mask:
