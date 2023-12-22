@@ -370,7 +370,9 @@ class LettucePreTBClassDataset(Dataset):
                 if time > 24:
                     ind_filter.append(ind)
         # Filter out RGB images from experiment 41 or later timepoints of experiment 51
-        img_paths = [path for ind, path in enumerate(img_paths) if ind not in ind_filter]
+        img_paths = [
+            path for ind, path in enumerate(img_paths) if ind not in ind_filter
+        ]
 
         # Also create lists of filepaths for Fm and FvFm if desired
         if fm_dir is not None:
@@ -379,14 +381,18 @@ class LettucePreTBClassDataset(Dataset):
                 fm_path = os.path.join(fm_dir, fm_name)
                 fm_paths.append(fm_path)
             # Filter out RGB images from experiment 41 or later timepoints of experiment 51
-            fm_paths = [path for ind, path in enumerate(fm_paths) if ind not in ind_filter]
+            fm_paths = [
+                path for ind, path in enumerate(fm_paths) if ind not in ind_filter
+            ]
         if fvfm_dir is not None:
             fvfm_paths = []
             for fvfm_name in fvfm_names:
                 fvfm_path = os.path.join(fvfm_dir, fvfm_name)
                 fvfm_paths.append(fvfm_path)
             # Filter out RGB images from experiment 41 or later timepoints of experiment 51
-            fvfm_paths = [path for ind, path in enumerate(fvfm_paths) if ind not in ind_filter]
+            fvfm_paths = [
+                path for ind, path in enumerate(fvfm_paths) if ind not in ind_filter
+            ]
 
         # Split into train and test sets if desired when not doing K-fold cross validation
         if (train_frac < 1) and (kfold is None):
