@@ -334,12 +334,14 @@ class LettucePreTBClassDataset(Dataset):
         if fvfm_dir is not None:
             fvfm_names = sorted(os.listdir(fvfm_dir))
 
-        # Create lists of filepaths for images and corresponding list of labels
+        # Create lists of filepaths for images, corresponding list of labels and find indices to filter out
         img_paths = []
         labels = []
         regex_exp = re.compile("^\d{2}")
         regex_trayID = re.compile(".+Tray_(\d{2,})")
-        for img_name in self.img_names:
+        ind_filter = []
+        regex_time = re.compile("^\d{2}-(\d+)-")
+        for ind, img_name in enumerate(self.img_names):
             # List image name paths
             img_path = os.path.join(img_dir, img_name)
             img_paths.append(img_path)
@@ -356,8 +358,19 @@ class LettucePreTBClassDataset(Dataset):
             elif exp == 51:
                 if trayID <= 80:
                     label = 1
+                else:
                     label = 0
             labels.append(label)
+            # List indices to filter out if they are experiment 41 or later timepoints of experiment 51
+            if ind.startswith("41"):
+                ind_filter.append(ind)
+            else:
+                match_time = regex_time.match(img_name)
+                time = int(match_time.group(1))
+                if time > 24:
+                    ind_filter.append(ind)
+        # Filter out RGB images from experiment 41 or later timepoints of experiment 51
+        img_paths = [path for ind, path in enumerate(img_paths) if ind not in ind_filter]
 
         # Also create lists of filepaths for Fm and FvFm if desired
         if fm_dir is not None:
@@ -365,11 +378,15 @@ class LettucePreTBClassDataset(Dataset):
             for fm_name in fm_names:
                 fm_path = os.path.join(fm_dir, fm_name)
                 fm_paths.append(fm_path)
+            # Filter out RGB images from experiment 41 or later timepoints of experiment 51
+            fm_paths = [path for ind, path in enumerate(fm_paths) if ind not in ind_filter]
         if fvfm_dir is not None:
             fvfm_paths = []
             for fvfm_name in fvfm_names:
                 fvfm_path = os.path.join(fvfm_dir, fvfm_name)
                 fvfm_paths.append(fvfm_path)
+            # Filter out RGB images from experiment 41 or later timepoints of experiment 51
+            fvfm_paths = [path for ind, path in enumerate(fvfm_paths) if ind not in ind_filter]
 
         # Split into train and test sets if desired when not doing K-fold cross validation
         if (train_frac < 1) and (kfold is None):
