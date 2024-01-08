@@ -545,41 +545,6 @@ class LettucePreTBClassDataset(Dataset):
         return result
 
 
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
-import cv2
-
-train_augs = A.Compose(
-    [
-        A.Resize(height=480, width=480),
-        A.Rotate(limit=1100, border_mode=cv2.BORDER_CONSTANT, p=0.5),
-        A.HorizontalFlip(p=0.5),
-        A.VerticalFlip(p=0.5),
-        A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
-        A.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05, p=0.5),
-        ToTensorV2(),
-    ],
-    is_check_shapes=False,
-)
-train_ds = LettucePreTBClassDataset(
-    img_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined",
-    label_dir=None,
-    train_frac=0.75,
-    fm_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fm_crops_combined",
-    fvfm_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fvfm_crops_combined",
-    is_train=True,
-    transform=train_augs,
-    seed=42,
-    give_name=True,
-)
-
-len(train_ds)
-sample = train_ds[0]
-sample[0].shape
-sample[1]
-sample[2]
-
-
 # Define data loaders for training and testing
 def get_loaders(
     dataset,
