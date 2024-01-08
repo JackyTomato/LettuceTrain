@@ -298,7 +298,12 @@ class Segmenter(nn.Module):
         if self.fusion == "intermediate":
             # Separate different inputs
             input1 = x[:, : self.n_channels_med1, :, :]
-            input2 = x[:, : self.n_channels_med2, :, :]
+            input2 = x[
+                :,
+                self.n_channels_med1 : self.n_channels_med1 + self.n_channels_med2,
+                :,
+                :,
+            ]
 
             # Run inputs through encoders
             features1 = self.encoder1(input1)
