@@ -334,7 +334,7 @@ class LettucePreTBClassDataset(Dataset):
         if fvfm_dir is not None:
             fvfm_names = sorted(os.listdir(fvfm_dir))
 
-        # Create lists of filepaths for images, corresponding list of labels and find indices to filter out
+        # Create lists of filepaths for images, corresponding list of GT labels and find indices to filter out
         img_paths = []
         labels = []
         regex_exp = re.compile("^\d{2}")
@@ -369,10 +369,11 @@ class LettucePreTBClassDataset(Dataset):
                 time = int(match_time.group(1))
                 if time > 24:
                     ind_filter.append(ind)
-        # Filter out RGB images from experiment 41 or later timepoints of experiment 51
+        # Filter out RGB images and labels from experiment 41 or later timepoints of experiment 51
         img_paths = [
             path for ind, path in enumerate(img_paths) if ind not in ind_filter
         ]
+        labels = [label for ind, label in enumerate(labels) if ind not in ind_filter]
 
         # Also create lists of filepaths for Fm and FvFm if desired
         if fm_dir is not None:
