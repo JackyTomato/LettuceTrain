@@ -533,7 +533,7 @@ class LettucePreTBClassDataset(Dataset):
             img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
         if fvfm_exists:
             img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
-        result = (img, mask)
+        result = (img, gt_label)
 
         # Also provide image name if desired
         if self.give_name:
