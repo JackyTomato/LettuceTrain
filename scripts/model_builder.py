@@ -123,7 +123,7 @@ class Segmenter(nn.Module):
             n_classes (int): Number of output classes for segmentation.
             decoder_attention (str): Attention type for decoder. Available for Unet: None or "scse".
             encoder_freeze (bool): If true, freezes parameters of the encoder.
-            fusion (str, optional): Fusion of RGB with fluor data: early, intermediate, or late. Defaults to None.
+            fusion (str, optional): Fusion of RGB with fluor data: early, intermediate, intermediate_kim, or late. Defaults to None.
             n_channels_med1(int, optional:) Number of input channels for first encoder in intermediate fusion. Defaults to 3.
             n_channels_med2(int, optional:) Number of input channels for second encoder in intermediate fusion. Defaults to 2.
         """
@@ -159,7 +159,7 @@ class Segmenter(nn.Module):
             self.model = eval(model_call)
 
             # Change network architecture for intermediate or late fusion
-            if self.fusion == "intermediate":
+            if self.fusion.startswith("intermediate"):
                 if not encoder_name.startswith("mit"):
                     # Extract encoder and deepcopy encoder
                     self.encoder1 = self.model.encoder
@@ -183,8 +183,7 @@ class Segmenter(nn.Module):
 
                 # Initialize intermediate fusion modules
                 if encoder_name == "timm-res2net50_14w_8s":
-                    self.kim_gated_fusion = True
-                    if self.kim_gated_fusion:
+                    if self.fusion == "intermediate_kim":
                         # Initialize weight generators to create weighted sum of features
                         self.wg1_1 = kim_wg(in_channels=128)
                         self.wg1_2 = kim_wg(in_channels=128)
@@ -316,7 +315,7 @@ class Segmenter(nn.Module):
                 feature1, feature2 = feature12
                 feature_cat = torch.concatenate((feature1, feature2), dim=1)
 
-                if self.kim_gated_fusion:
+                if self.fusion == "intermediate_kim":
                     # Don't use weight gate for first feature maps as it has original resolutions
                     if index != 0:
                         # Calculate weights for each feature map of different encoders
