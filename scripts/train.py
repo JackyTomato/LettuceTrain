@@ -33,6 +33,7 @@ Example of config.json with brief explanations as comments:
     "IMG_DIR": "data/img", # str, filepath of dir containing the imaging data
     "LABEL_DIR": "data/label", # str, filepath of dir containing image labels
     "TRAIN_FRAC": 0.75, # float, fraction of dataset to use for training or [0.4, 0.8] # list of floats, for trainset size testing
+    "FUSION": "intermediate", # string, "early", "intermediate" or "intermediate_kim" for Kim et al. GIF fusion
     "KFOLD" : 4, # int, K for K-fold cross validation
     "TRANSFORMS": [
         "A.Resize(height=512, width=512)",
