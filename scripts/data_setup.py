@@ -276,11 +276,11 @@ class LettuceSegDataset(Dataset):
             img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
         if fvfm_exists:
             img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
-        result = (img, mask)
+        result = [img, mask]
 
         # Also provide image name if desired
         if self.give_name:
-            img_name = self.img_names[index].split(os.extsep)[0]
+            img_name = os.path.basename(os.path.normpath(self.img_paths[index]))
             result.append(img_name)
 
         return result
@@ -290,8 +290,9 @@ class LettuceSegDataset(Dataset):
 class LettucePreTBClassDataset(Dataset):
     def __init__(
         self,
-        img_dir,
         is_train,
+        img_dir,
+        label_dir=None,
         fm_dir=None,
         fvfm_dir=None,
         train_frac=0.75,
@@ -347,7 +348,7 @@ class LettucePreTBClassDataset(Dataset):
             img_paths.append(img_path)
             # List corresponding labels based on timepoint and trayID in filename
             match_exp = regex_exp.match(img_name)
-            exp = match_exp.group(1)
+            exp = int(match_exp.group(0))
             match_trayID = regex_trayID.match(img_name)
             trayID = int(match_trayID.group(1))
             if exp == 41:
@@ -362,7 +363,7 @@ class LettucePreTBClassDataset(Dataset):
                     label = 0
             labels.append(label)
             # List indices to filter out if they are experiment 41 or later timepoints of experiment 51
-            if ind.startswith("41"):
+            if exp == 41:
                 ind_filter.append(ind)
             else:
                 match_time = regex_time.match(img_name)
@@ -488,6 +489,7 @@ class LettucePreTBClassDataset(Dataset):
         fvfm_exists = hasattr(self, "fvfm_paths")
 
         # Retrieve image, should be np.array for albumentations.transforms
+        print(self.img_paths[index])
         img = np.array(Image.open(self.img_paths[index]))
 
         # Also retrieve Fm and FvFm images if desired
@@ -533,14 +535,49 @@ class LettucePreTBClassDataset(Dataset):
             img = np.concatenate([img, fm[np.newaxis, :, :]], axis=0)
         if fvfm_exists:
             img = np.concatenate([img, fvfm[np.newaxis, :, :]], axis=0)
-        result = (img, gt_label)
+        result = [img, gt_label]
 
         # Also provide image name if desired
         if self.give_name:
-            img_name = self.img_names[index].split(os.extsep)[0]
+            img_name = os.path.basename(os.path.normpath(self.img_paths[index]))
             result.append(img_name)
 
         return result
+
+
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+import cv2
+
+train_augs = A.Compose(
+    [
+        A.Resize(height=480, width=480),
+        A.Rotate(limit=1100, border_mode=cv2.BORDER_CONSTANT, p=0.5),
+        A.HorizontalFlip(p=0.5),
+        A.VerticalFlip(p=0.5),
+        A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5),
+        A.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05, p=0.5),
+        ToTensorV2(),
+    ],
+    is_check_shapes=False,
+)
+train_ds = LettucePreTBClassDataset(
+    img_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/UnetMit-b3_bg_masks_combined",
+    label_dir=None,
+    train_frac=0.75,
+    fm_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fm_crops_combined",
+    fvfm_dir="/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest_tipburn/fvfm_crops_combined",
+    is_train=True,
+    transform=train_augs,
+    seed=42,
+    give_name=True,
+)
+
+len(train_ds)
+sample = train_ds[0]
+sample[0].shape
+sample[1]
+sample[2]
 
 
 # Define data loaders for training and testing
