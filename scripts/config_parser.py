@@ -53,6 +53,8 @@ PERFORMANCE_FN = eval(_config_dict["PERFORMANCE_FN"])
 DATASET = eval(_config_dict["DATA_CLASS"])
 IMG_DIR = _config_dict["IMG_DIR"]
 LABEL_DIR = _config_dict["LABEL_DIR"]
+if LABEL_DIR == "None":
+    LABEL_DIR = eval(LABEL_DIR)  # In case of no label for e.g. classifier
 FM_DIR = _config_dict["FM_DIR"]
 if FM_DIR == "None":
     FM_DIR = eval(FM_DIR)  # In case of no Fm
