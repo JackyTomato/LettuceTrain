@@ -522,6 +522,9 @@ class LettucePreTBClassDataset(Dataset):
                     fvfm = augmentations["masks"]
                 elif (fm_exists) and (fvfm_exists):
                     fm, fvfm = augmentations["masks"]
+            else:
+                # Apply augmentations
+                augmentations = self.transform(image=img)
             # Retrieve RGB image augmentations
             img = augmentations["image"]
 
