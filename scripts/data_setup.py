@@ -501,41 +501,28 @@ class LettucePreTBClassDataset(Dataset):
             img_fit = resize(img, (fvfm.shape[0], fvfm.shape[1], 3), anti_aliasing=True)
             fvfm = fvfm * (img_fit.sum(axis=2) > 0)  # apply RGB background mask
 
-        # Retrieve mask, mask could be .json or an image format
-        size = img.shape[:2]
-        if self.labels[index].endswith(".json"):
-            mask = utils.binary_poly2px(self.labels[index], custom_size=size)
-        elif self.labels[index].endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff")):
-            mask = np.array(Image.open(self.labels[index]))
-        else:
-            mask = np.zeros(size, dtype=np.int32)  # Create empty mask for missing mask
-        if 255.0 in mask:
-            mask[mask == 255.0] = 1.0
+        # Retrieve corresponding GT label
+        gt_label = self.labels[index]
 
-        # Apply data augmentation transforms to image, mask and optionally Fm and FvFm
+        # Apply data augmentation transforms to image and optionally Fm and FvFm
         if self.transform is not None:
             if fm_exists or fvfm_exists:
                 # Apply augmentations
-                grayscales = [mask]
+                grayscales = []
                 if fm_exists:
                     grayscales.append(fm)
                 if fvfm_exists:
                     grayscales.append(fvfm)
                 augmentations = self.transform(image=img, masks=grayscales)
 
-                # Retrieve augmentations
+                # Retrieve fluor image augmentations
                 if (fm_exists) and (not fvfm_exists):
-                    mask, fm = augmentations["masks"]
+                    fm = augmentations["masks"]
                 elif (not fm_exists) and (fvfm_exists):
-                    mask, fvfm = augmentations["masks"]
+                    fvfm = augmentations["masks"]
                 elif (fm_exists) and (fvfm_exists):
-                    mask, fm, fvfm = augmentations["masks"]
-            else:
-                # Apply augmentations
-                augmentations = self.transform(image=img, mask=mask)
-
-                # Retrieve augmentations
-                mask = augmentations["mask"]
+                    fm, fvfm = augmentations["masks"]
+            # Retrieve RGB image augmentations
             img = augmentations["image"]
 
         # Compile resulting images, in a way suitable for fusion if desired
