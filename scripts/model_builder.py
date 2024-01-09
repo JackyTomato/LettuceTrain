@@ -294,7 +294,7 @@ class Segmenter(nn.Module):
     def forward(self, x):
         if (self.fusion == None) or (self.fusion == "early"):
             pred_logits = self.model(x)
-        if self.fusion == "intermediate":
+        if self.fusion.startswith("intermediate"):
             # Separate different inputs
             input1 = x[:, : self.n_channels_med1, :, :]
             input2 = x[
