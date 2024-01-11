@@ -399,8 +399,7 @@ class Classifier(nn.Module):
         self.n_channels_med1 = n_channels_med1
         self.n_channels_med2 = n_channels_med2
 
-        # Set backbone, allow for different models and pretraining
-        # Use backbone from segmentation models pytorch (smp)
+        # Initialize model model, allow for different models and pretraining
         if encoder_name.startswith("resn"):
             # Allows for different models and pretraining
             if encoder_weights is not None:
@@ -413,13 +412,34 @@ class Classifier(nn.Module):
                 )
             self.model = eval(model_call)
 
+            # Only tweak input and output channels for no or early fusion
+            if (self.fusion == None) or (self.fusion == "early"):
+                # Tweak number of channels of first layer if not correct already
+                first_conv = self.model.conv1
+                if first_conv.weight.shape[1] != self.n_channels:
+                    first_conv.weight = nn.Parameter(
+                        first_conv1.weight[:, : self.n_channels_med1, :, :]
+                    )
+
+                # Subset encoder from model and make own decoder with desired output channels
+                self.encoder = nn.Sequential(*list(self.model.children())[:-2])
+                self.decoder = nn.Sequential(
+                    nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                    nn.Linear(in_features=2048, out_features=n_classes, bias=True),
+                )
+
+                # Freeze weights in non-fully connected layers if desired
+                for name, param in self.model.named_parameters():
+                    if not name.startswith("fc"):
+                        param.requires_grad = not encoder_freeze
+
             # Change network architecture for intermediate or late fusion
-            if self.fusion.startswith("intermediate"):
-                # Remove final layers of model to create encoders
+            elif self.fusion.startswith("intermediate") or (self.fusion == "late"):
+                # Extract non-fully connected layers of model to create encoders
                 self.encoder1 = nn.Sequential(*list(self.model.children())[:-2])
                 self.encoder2 = deepcopy(self.encoder1)
 
-                # Tweak number of channels of encoders if not correct already
+                # Tweak number of channels of first layers if not correct already
                 first_conv1 = self.encoder1.conv1
                 first_conv2 = self.encoder2.conv1
                 if first_conv1.weight.shape[1] != self.n_channels_med1:
@@ -442,57 +462,21 @@ class Classifier(nn.Module):
                         in_channels=4096, out_channels=2048
                     )
 
-                    # Compile all weight generators and halvers
-                    self.wgs = nn.ModuleList(
-                        [
-                            self.wg1_1,
-                            self.wg1_2,
-                            self.wg2_1,
-                            self.wg2_2,
-                            self.wg3_1,
-                            self.wg3_2,
-                            self.wg4_1,
-                            self.wg4_2,
-                            self.wg5_1,
-                            self.wg5_2,
-                        ]
-                    )
-                    self.halvers = nn.ModuleList(
-                        [
-                            self.halver0,
-                            self.halver1,
-                            self.halver2,
-                            self.halver3,
-                            self.halver4,
-                            self.halver5,
-                        ]
-                    )
-
                 else:
                     # For first feature map at original number of channels
-                    self.halver0 = conv_channel_changer(
-                        in_channels=self.n_channels_med1 + self.n_channels_med2,
-                        out_channels=self.n_channels_med1,
-                    )
+                    self.halver = se_halver(channels=4096)
 
-                    # For subsequent feature maps
-                    self.halver1 = se_halver(channels=128)
-                    self.halver2 = se_halver(channels=512)
-                    self.halver3 = se_halver(channels=1024)
-                    self.halver4 = se_halver(channels=2048)
-                    self.halver5 = se_halver(channels=4096)
+                # Add decoder after fusion to classify for desired number of classes
+                self.decoder = nn.Sequential(
+                    nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                    nn.Linear(in_features=2048, out_features=n_classes, bias=True),
+                )
 
-                    # Compile all halvers to be used for each corresponding feature map
-                    self.halvers = nn.ModuleList(
-                        [
-                            self.halver0,
-                            self.halver1,
-                            self.halver2,
-                            self.halver3,
-                            self.halver4,
-                            self.halver5,
-                        ]
-                    )
+                # Freeze weights in non-fully connected layers if desired
+                for param in self.encoder1.parameters():
+                    param.requires_grad = not encoder_freeze
+                for param in self.encoder2.parameters():
+                    param.requires_grad = not encoder_freeze
 
             # Freeze weights in non-fully connected layers if desired
             if (self.fusion == None) or (self.fusion == "early"):
@@ -505,14 +489,20 @@ class Classifier(nn.Module):
                 for param in self.encoder2.parameters():
                     param.requires_grad = not encoder_freeze
 
-        # Use backbone from torchvision
         else:
-            pass
+            if self.fusion.startswith("intermediate"):
+                raise Exception(
+                    "Selected model is unsupported for intermediate fusion!"
+                )
 
     def forward(self, x):
+        # No or early fusion, with unchanged network architecture
         if (self.fusion == None) or (self.fusion == "early"):
-            pred_logits = self.model(x)
-        if self.fusion.startswith("intermediate"):
+            features = self.encoder(x)
+            pred_logits = self.decoder(features)
+
+        # Intermediate fusion, with fusion module in architecture
+        elif self.fusion.startswith("intermediate"):
             # Separate different inputs
             input1 = x[:, : self.n_channels_med1, :, :]
             input2 = x[
@@ -523,48 +513,32 @@ class Classifier(nn.Module):
             ]
 
             # Run inputs through encoders
-            features1 = self.encoder1(input1)
-            features2 = self.encoder2(input2)
+            feature1 = self.encoder1(input1)
+            feature2 = self.encoder2(input2)
 
-            # Loop through lists of feature maps
-            features = []
-            for index, feature12 in enumerate(zip(features1, features2)):
-                # Concatenate feature maps of different encoders
-                feature1, feature2 = feature12
-                feature_cat = torch.concatenate((feature1, feature2), dim=1)
+            # Concatenate feature maps of different encoders
+            feature_cat = torch.concatenate((feature1, feature2), dim=1)
 
-                if self.fusion == "intermediate_kim":
-                    # Don't use weight gate for first feature maps as it has original resolutions
-                    if index != 0:
-                        # Calculate weights for each feature map of different encoders
-                        wg1 = self.wgs[(index - 1) * 2]
-                        wg2 = self.wgs[(index - 1) * 2 + 1]
-                        weight1 = wg1(feature_cat)
-                        weight2 = wg2(feature_cat)
+            if self.fusion == "intermediate_kim":
+                weight1 = self.wg1(feature_cat)
+                weight2 = self.wg2(feature_cat)
 
-                        # Calculate weighted sum of feature maps of different encoders
-                        weighted_feature1 = feature1 * weight1
-                        weighted_feature2 = feature2 * weight2
-                        feature = torch.concatenate(
-                            (weighted_feature1, weighted_feature2), dim=1
-                        )
-                    else:
-                        feature = feature_cat
+                # Calculate weighted sum of feature maps of different encoders
+                weighted_feature1 = feature1 * weight1
+                weighted_feature2 = feature2 * weight2
+                feature = torch.concatenate(
+                    (weighted_feature1, weighted_feature2), dim=1
+                )
 
-                    # Half number of channels after fusion
-                    halver = self.halvers[index]
-                    fused_feature = halver(feature)
-                    features.append(fused_feature)
+                # Half number of channels after fusion
+                fused_feature = self.halver(feature)
 
-                else:
-                    # Squeeze-and-excite and halve each feature map of different encoders
-                    halver = self.halvers[index]
-                    fused_feature = halver(feature_cat)
-                    features.append(fused_feature)
+            else:
+                # Squeeze-and-excite and halve feature maps of different encoders
+                fused_feature = self.halver(feature_cat)
 
             # Create segmentation predictions
-            decoded = self.decoder(*features)
-            pred_logits = self.seghead(decoded)
+            pred_logits = self.decoder(fused_feature)
 
         return pred_logits
 
@@ -576,6 +550,10 @@ summary(model)
 print(model)
 encoder1 = nn.Sequential(*list(model.children())[:-2])
 print(encoder1)
+decoder = nn.Sequential(*list(model.children())[-2:])
+print(decoder)
+list(model.modules())
+model
 
 
 class Classifier(nn.Module):
