@@ -415,8 +415,8 @@ class Classifier(nn.Module):
 
             # Change network architecture for intermediate or late fusion
             if self.fusion.startswith("intermediate"):
-                # Extract encoder and deepcopy encoder
-                self.encoder1 = self.model.encoder
+                # Remove final layers of model to create encoders
+                self.encoder1 = nn.Sequential(*list(self.model.children())[:-2])
                 self.encoder2 = deepcopy(self.encoder1)
 
                 # Tweak number of channels of encoders if not correct already
@@ -432,105 +432,73 @@ class Classifier(nn.Module):
                     )
 
                 # Initialize intermediate fusion modules
-                if encoder_name == "timm-res2net50_14w_8s":
-                    if self.fusion == "intermediate_kim":
-                        # Initialize weight generators to create weighted sum of features
-                        self.wg1_1 = kim_wg(in_channels=128)
-                        self.wg1_2 = kim_wg(in_channels=128)
-                        self.wg2_1 = kim_wg(in_channels=512)
-                        self.wg2_2 = kim_wg(in_channels=512)
-                        self.wg3_1 = kim_wg(in_channels=1024)
-                        self.wg3_2 = kim_wg(in_channels=1024)
-                        self.wg4_1 = kim_wg(in_channels=2048)
-                        self.wg4_2 = kim_wg(in_channels=2048)
-                        self.wg5_1 = kim_wg(in_channels=4096)
-                        self.wg5_2 = kim_wg(in_channels=4096)
+                if self.fusion == "intermediate_kim":
+                    # Initialize weight generators to create weighted sum of features
+                    self.wg1 = kim_wg(in_channels=4096)
+                    self.wg2 = kim_wg(in_channels=4096)
 
-                        # Reduce number of channels by half after fusion
-                        self.halver0 = conv_channel_changer(
-                            in_channels=self.n_channels_med1 + self.n_channels_med2,
-                            out_channels=self.n_channels_med1,
-                        )
-                        self.halver1 = conv_channel_changer(
-                            in_channels=128, out_channels=64
-                        )
-                        self.halver2 = conv_channel_changer(
-                            in_channels=512, out_channels=256
-                        )
-                        self.halver3 = conv_channel_changer(
-                            in_channels=1024, out_channels=512
-                        )
-                        self.halver4 = conv_channel_changer(
-                            in_channels=2048, out_channels=1024
-                        )
-                        self.halver5 = conv_channel_changer(
-                            in_channels=4096, out_channels=2048
-                        )
-
-                        # Compile all weight generators and halvers
-                        self.wgs = nn.ModuleList(
-                            [
-                                self.wg1_1,
-                                self.wg1_2,
-                                self.wg2_1,
-                                self.wg2_2,
-                                self.wg3_1,
-                                self.wg3_2,
-                                self.wg4_1,
-                                self.wg4_2,
-                                self.wg5_1,
-                                self.wg5_2,
-                            ]
-                        )
-                        self.halvers = nn.ModuleList(
-                            [
-                                self.halver0,
-                                self.halver1,
-                                self.halver2,
-                                self.halver3,
-                                self.halver4,
-                                self.halver5,
-                            ]
-                        )
-
-                    else:
-                        # For first feature map at original number of channels
-                        self.halver0 = conv_channel_changer(
-                            in_channels=self.n_channels_med1 + self.n_channels_med2,
-                            out_channels=self.n_channels_med1,
-                        )
-
-                        # For subsequent feature maps
-                        self.halver1 = se_halver(channels=128)
-                        self.halver2 = se_halver(channels=512)
-                        self.halver3 = se_halver(channels=1024)
-                        self.halver4 = se_halver(channels=2048)
-                        self.halver5 = se_halver(channels=4096)
-
-                        # Compile all halvers to be used for each corresponding feature map
-                        self.halvers = nn.ModuleList(
-                            [
-                                self.halver0,
-                                self.halver1,
-                                self.halver2,
-                                self.halver3,
-                                self.halver4,
-                                self.halver5,
-                            ]
-                        )
-                else:
-                    raise (
-                        "[INFO] This encoder does not yet support intermediate fusion!"
+                    # Reduce number of channels by half after fusion
+                    self.halver = conv_channel_changer(
+                        in_channels=4096, out_channels=2048
                     )
 
-                # Separate decoder and segmentation head from encoders
-                self.decoder = self.model.decoder
-                self.seghead = self.model.segmentation_head
+                    # Compile all weight generators and halvers
+                    self.wgs = nn.ModuleList(
+                        [
+                            self.wg1_1,
+                            self.wg1_2,
+                            self.wg2_1,
+                            self.wg2_2,
+                            self.wg3_1,
+                            self.wg3_2,
+                            self.wg4_1,
+                            self.wg4_2,
+                            self.wg5_1,
+                            self.wg5_2,
+                        ]
+                    )
+                    self.halvers = nn.ModuleList(
+                        [
+                            self.halver0,
+                            self.halver1,
+                            self.halver2,
+                            self.halver3,
+                            self.halver4,
+                            self.halver5,
+                        ]
+                    )
 
-            # Freeze weights in encoder if desired
+                else:
+                    # For first feature map at original number of channels
+                    self.halver0 = conv_channel_changer(
+                        in_channels=self.n_channels_med1 + self.n_channels_med2,
+                        out_channels=self.n_channels_med1,
+                    )
+
+                    # For subsequent feature maps
+                    self.halver1 = se_halver(channels=128)
+                    self.halver2 = se_halver(channels=512)
+                    self.halver3 = se_halver(channels=1024)
+                    self.halver4 = se_halver(channels=2048)
+                    self.halver5 = se_halver(channels=4096)
+
+                    # Compile all halvers to be used for each corresponding feature map
+                    self.halvers = nn.ModuleList(
+                        [
+                            self.halver0,
+                            self.halver1,
+                            self.halver2,
+                            self.halver3,
+                            self.halver4,
+                            self.halver5,
+                        ]
+                    )
+
+            # Freeze weights in non-fully connected layers if desired
             if (self.fusion == None) or (self.fusion == "early"):
-                for param in self.model.encoder.parameters():
-                    param.requires_grad = not encoder_freeze
+                for name, param in self.model.named_parameters():
+                    if not name.startswith("fc"):
+                        param.requires_grad = not encoder_freeze
             if (self.fusion == "intermediate") or (self.fusion == "late"):
                 for param in self.encoder1.parameters():
                     param.requires_grad = not encoder_freeze
@@ -599,6 +567,15 @@ class Classifier(nn.Module):
             pred_logits = self.seghead(decoded)
 
         return pred_logits
+
+
+from torchinfo import summary
+
+model = torchvision.models.resnext101_64x4d(weights="IMAGENET1K_V1")
+summary(model)
+print(model)
+encoder1 = nn.Sequential(*list(model.children())[:-2])
+print(encoder1)
 
 
 class Classifier(nn.Module):
