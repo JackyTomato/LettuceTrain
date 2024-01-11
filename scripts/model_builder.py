@@ -412,12 +412,17 @@ class Classifier(nn.Module):
 
             # Only tweak input and output channels for no or early fusion
             if (self.fusion == None) or (self.fusion == "early"):
-                # Tweak number of channels of first layer if not correct already
-                first_conv = self.model.conv1
-                if first_conv.weight.shape[1] != self.n_channels:
-                    first_conv.weight = nn.Parameter(
-                        first_conv1.weight[:, : self.n_channels_med1, :, :]
-                    )
+                # Change input channels of first conv layer
+                old_conv1 = self.model.conv1
+                new_conv1 = nn.Conv2d(
+                    n_channels,
+                    old_conv1.out_channels,
+                    kernel_size=old_conv1.kernel_size,
+                    stride=old_conv1.stride,
+                    padding=old_conv1.padding,
+                    bias=old_conv1.bias,
+                )
+                self.model.conv1 = new_conv1
 
                 # Subset encoder from model and make own decoder with desired output channels
                 self.encoder = nn.Sequential(*list(self.model.children())[:-2])
@@ -550,8 +555,19 @@ encoder1 = nn.Sequential(*list(model.children())[:-2])
 print(encoder1)
 decoder = nn.Sequential(*list(model.children())[-2:])
 print(decoder)
-list(model.modules())
-model
+
+model = Classifier(
+    model_name=None,
+    encoder_name=cp.ENCODER_NAME,
+    encoder_weights="IMAGENET1K_V1",
+    n_channels=cp.N_CHANNELS,
+    n_classes=cp.N_CLASSES,
+    decoder_attention=cp.DECODER_ATTENTION,
+    encoder_freeze=cp.ENCODER_FREEZE,
+    fusion=cp.FUSION,
+    n_channels_med1=cp.N_CHANNELS_MED1,
+    n_channels_med2=cp.N_CHANNELS_MED2,
+)
 
 
 class Classifier(nn.Module):
