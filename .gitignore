@@ -15,3 +15,4 @@ scripts/UnetMit_ep100.out
 scripts/transfer_traintest.py
 scripts/run_segmodel.py
 scripts/run_segmodel.spec
+.vscode/settings.json
