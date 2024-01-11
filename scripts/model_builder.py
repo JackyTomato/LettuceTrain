@@ -480,18 +480,7 @@ class Classifier(nn.Module):
                     param.requires_grad = not encoder_freeze
                 for param in self.encoder2.parameters():
                     param.requires_grad = not encoder_freeze
-
-            # Freeze weights in non-fully connected layers if desired
-            if (self.fusion == None) or (self.fusion == "early"):
-                for name, param in self.model.named_parameters():
-                    if not name.startswith("fc"):
-                        param.requires_grad = not encoder_freeze
-            if (self.fusion == "intermediate") or (self.fusion == "late"):
-                for param in self.encoder1.parameters():
-                    param.requires_grad = not encoder_freeze
-                for param in self.encoder2.parameters():
-                    param.requires_grad = not encoder_freeze
-
+                    
         else:
             if self.fusion.startswith("intermediate"):
                 raise Exception(
