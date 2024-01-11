@@ -370,7 +370,7 @@ class Classifier(nn.Module):
         Creates a CNN which can be created pretrained and with its parameters in early layers frozen.
         Names of networks and weights should follow the torchvision API:
             https://pytorch.org/vision/stable/models.html#listing-and-retrieving-available-models
-        Only supports the following backbones:
+        Only supports the following network architectures:
             All ResNet, all ResNeXt
 
         Intermediate fusion is performed by copying the encoder, feeding the input of different
