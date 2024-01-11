@@ -365,15 +365,13 @@ class Classifier(nn.Module):
         model_name=None,
         decoder_attention=None,
     ):
-        """Creates a semantic segmentation model as PyTorch nn.Module class.
+        """Creates a classification model as PyTorch nn.Module class.
 
-        Creates a segmentation model with an encoder. Encoder can be pretrained and frozen.
-        Names of networks and weights should follow the Segmentation Models Pytorch (smp) API:
-            https://github.com/qubvel/segmentation_models.pytorch
-        Or the torchvision API:
+        Creates a CNN which can be created pretrained and with its parameters in early layers frozen.
+        Names of networks and weights should follow the torchvision API:
             https://pytorch.org/vision/stable/models.html#listing-and-retrieving-available-models
-        Only supports the following torchvision models:
-            -
+        Only supports the following backbones:
+            All ResNet, all ResNeXt
 
         Intermediate fusion is performed by copying the encoder, feeding the input of different
         modalities in the different encoders and concatenating the resulting feature maps before
@@ -383,8 +381,8 @@ class Classifier(nn.Module):
         n_channels should always be equal to or larger than both n_channels_med1 and n_channels_med2.
 
         Args:
-            encoder_name (str): Name of encoder for segmentation mdoel as in smp.
-            encoder_weights (str): Weights for encoder pretraining as in smp. Usually "imagenet".
+            encoder_name (str): Name of encoder for segmentation mdoel as in torchvision.
+            encoder_weights (str): Weights for encoder pretraining as in torchvision. Usually "IMAGENET1K_V1".
             n_channels (int): Number of input channels.
             n_classes (int): Number of output classes for segmentation.
             encoder_freeze (bool): If true, freezes parameters of the encoder.
