@@ -414,15 +414,16 @@ class Classifier(nn.Module):
             if (self.fusion == None) or (self.fusion == "early"):
                 # Change input channels of first conv layer
                 old_conv1 = self.model.conv1
-                new_conv1 = nn.Conv2d(
-                    n_channels,
-                    old_conv1.out_channels,
-                    kernel_size=old_conv1.kernel_size,
-                    stride=old_conv1.stride,
-                    padding=old_conv1.padding,
-                    bias=old_conv1.bias,
-                )
-                self.model.conv1 = new_conv1
+                if old_conv1.in_channels != n_channels:
+                    new_conv1 = nn.Conv2d(
+                        n_channels,
+                        old_conv1.out_channels,
+                        kernel_size=old_conv1.kernel_size,
+                        stride=old_conv1.stride,
+                        padding=old_conv1.padding,
+                        bias=old_conv1.bias,
+                    )
+                    self.model.conv1 = new_conv1
 
                 # Subset encoder from model and make own decoder with desired output channels
                 self.encoder = nn.Sequential(*list(self.model.children())[:-2])
