@@ -428,6 +428,7 @@ class Classifier(nn.Module):
                 self.encoder = nn.Sequential(*list(self.model.children())[:-2])
                 self.decoder = nn.Sequential(
                     nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                    nn.Flatten(),
                     nn.Linear(in_features=2048, out_features=n_classes, bias=True),
                 )
 
@@ -438,13 +439,12 @@ class Classifier(nn.Module):
 
             # Change network architecture for intermediate or late fusion
             elif self.fusion.startswith("intermediate") or (self.fusion == "late"):
-                # Extract non-fully connected layers of model to create encoders
-                self.encoder1 = nn.Sequential(*list(self.model.children())[:-2])
-                self.encoder2 = deepcopy(self.encoder1)
+                # Deepcopy model to create an encoder for each image type
+                self.model2 = deepcopy(self.model)
 
                 # Tweak number of channels of first layers if not correct already
-                first_conv1 = self.encoder1.conv1
-                first_conv2 = self.encoder2.conv1
+                first_conv1 = self.model.conv1
+                first_conv2 = self.model2.conv1
                 if first_conv1.weight.shape[1] != self.n_channels_med1:
                     first_conv1.weight = nn.Parameter(
                         first_conv1.weight[:, : self.n_channels_med1, :, :]
@@ -453,6 +453,10 @@ class Classifier(nn.Module):
                     first_conv2.weight = nn.Parameter(
                         first_conv2.weight[:, : self.n_channels_med2, :, :]
                     )
+
+                # Clip off last layers of models so only encoders remain
+                self.encoder1 = nn.Sequential(*list(self.model.children())[:-2])
+                self.encoder2 = nn.Sequential(*list(self.model2.children())[:-2])
 
                 # Initialize intermediate fusion modules
                 if self.fusion == "intermediate_kim":
@@ -472,6 +476,7 @@ class Classifier(nn.Module):
                 # Add decoder after fusion to classify for desired number of classes
                 self.decoder = nn.Sequential(
                     nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                    nn.Flatten(),
                     nn.Linear(in_features=2048, out_features=n_classes, bias=True),
                 )
 
@@ -480,7 +485,7 @@ class Classifier(nn.Module):
                     param.requires_grad = not encoder_freeze
                 for param in self.encoder2.parameters():
                     param.requires_grad = not encoder_freeze
-                    
+
         else:
             if self.fusion.startswith("intermediate"):
                 raise Exception(
@@ -537,26 +542,23 @@ class Classifier(nn.Module):
 
 from torchinfo import summary
 
-model = torchvision.models.resnext101_64x4d(weights="IMAGENET1K_V1")
-summary(model)
-print(model)
-encoder1 = nn.Sequential(*list(model.children())[:-2])
-print(encoder1)
-decoder = nn.Sequential(*list(model.children())[-2:])
-print(decoder)
-
 model = Classifier(
     model_name=None,
-    encoder_name=cp.ENCODER_NAME,
+    encoder_name="resnext101_64x4d",
     encoder_weights="IMAGENET1K_V1",
-    n_channels=cp.N_CHANNELS,
-    n_classes=cp.N_CLASSES,
-    decoder_attention=cp.DECODER_ATTENTION,
-    encoder_freeze=cp.ENCODER_FREEZE,
-    fusion=cp.FUSION,
-    n_channels_med1=cp.N_CHANNELS_MED1,
-    n_channels_med2=cp.N_CHANNELS_MED2,
+    n_channels=3,
+    n_classes=1,
+    decoder_attention=None,
+    encoder_freeze=False,
+    fusion="intermediate_kim",
+    n_channels_med1=3,
+    n_channels_med2=2,
 )
+model
+summary(model, input_size=(1, 5, 512, 512))
+
+model = torchvision.models.resnext101_64x4d(weights="IMAGENET1K_V1")
+nn.Sequential(*list(model.children())[:-2]).state_dict().keys()
 
 
 class Classifier(nn.Module):
