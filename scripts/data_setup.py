@@ -489,7 +489,6 @@ class LettucePreTBClassDataset(Dataset):
         fvfm_exists = hasattr(self, "fvfm_paths")
 
         # Retrieve image, should be np.array for albumentations.transforms
-        print(self.img_paths[index])
         img = np.array(Image.open(self.img_paths[index]))
 
         # Also retrieve Fm and FvFm images if desired
