@@ -545,6 +545,7 @@ def path_crop(
     crop_dist,
     rm_alpha=True,
     rgb_save_dir=None,
+    dataset="lettuce",
 ):
     """Crops individual plants from RGB image from filepath.
 
@@ -555,11 +556,12 @@ def path_crop(
 
     Args:
         rgb_path (str): Filepath to RGB image.
-        tray_reg (dict): Dictionary of information from the tray registration file.
+        tray_reg (dict): Dictionary of information from the tray registration file. Only for lettuce dataset.
         crop_shape (tuple): Tuple of ints for shape of crop.
         crop_dist (int): Vertical/horizontal distance between plants on tray.
         rm_alpha (bool, optional): Removes alpha channel from RGB. Defaults to True.
         rgb_save_dir (str, optional): Directory to save RGB crops. Defaults to None.
+        dataset (str, optional): Kind of dataset. "lettuce" or "potato". To determine how to crop. Defaults to "lettuce".
 
     Returns:
         list: Contains cropped RGB images as np.ndarrays.
@@ -574,17 +576,31 @@ def path_crop(
     if rm_alpha and rgb.shape[2] == 4:
         rgb = no_alpha(rgb)
 
-    # Extract tray ID from RGB image filename
-    rgb_name = os.path.basename(rgb_path)
-    regex_trayID = re.compile(".+Tray_(\d{2,})")
-    match_trayID = regex_trayID.match(rgb_name)
-    trayID = match_trayID.group(1)
+    if dataset == "lettuce":
+        # Extract tray ID from RGB image filename
+        rgb_name = os.path.basename(rgb_path)
+        regex_trayID = re.compile(".+Tray_(\d{2,})")
+        match_trayID = regex_trayID.match(rgb_name)
+        trayID = match_trayID.group(1)
 
-    # Determine if image file has 4 or 5 plants
-    all_trayIDs = tray_reg["TrayID"]
-    bool_ind_trayID = np.core.defchararray.find(all_trayIDs, trayID) != -1
-    ind_trayID = np.flatnonzero(bool_ind_trayID)
-    num_plants = len(ind_trayID)
+        # Determine if image file has 4 or 5 plants
+        all_trayIDs = tray_reg["TrayID"]
+        bool_ind_trayID = np.core.defchararray.find(all_trayIDs, trayID) != -1
+        ind_trayID = np.flatnonzero(bool_ind_trayID)
+        num_plants = len(ind_trayID)
+
+    elif dataset == "potato":
+        # Extract tray ID from RGB image filename
+        rgb_name = os.path.basename(rgb_path)
+        regex_trayID = re.compile(".+circlewrong_(\d{2,})")
+        match_trayID = regex_trayID.match(rgb_name)
+        trayID = int(match_trayID.group(1))
+
+        # Determine if image file has 4 or 5 plants
+        if trayID % 2 == 1:
+            num_plants = 4
+        else:
+            num_plants = 5
 
     # Crop RGB, Fm and FvFm crops in such a way that they overlap
     rgb_crops = indiv_crop(
@@ -593,19 +609,18 @@ def path_crop(
 
     # Save cropped images if desired, with plant names in filename
     if rgb_save_dir is not None:
-        # Extract plant names
-        all_plantnames = tray_reg["PlantName"]
-        plantnames = all_plantnames[ind_trayID]
+        if dataset == "lettuce":
+            # Extract plant names
+            all_plantnames = tray_reg["PlantName"]
+            plantnames = all_plantnames[ind_trayID]
 
-        # Count to add correct area number and plantname
-        count = 0
-        for rgb_crop in rgb_crops:
-            old_name = os.path.basename(rgb_path)
-            new_name = (
-                f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.png"
-            )
-            count += 1
-            utils.save_img(rgb_crop, target_dir=rgb_save_dir, filename=new_name)
+            # Count to add correct area number and plantname
+            count = 0
+            for rgb_crop in rgb_crops:
+                old_name = os.path.basename(rgb_path)
+                new_name = f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.png"
+                count += 1
+                utils.save_img(rgb_crop, target_dir=rgb_save_dir, filename=new_name)
 
     return rgb_crops
 
