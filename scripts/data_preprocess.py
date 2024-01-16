@@ -621,6 +621,14 @@ def path_crop(
                 new_name = f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.png"
                 count += 1
                 utils.save_img(rgb_crop, target_dir=rgb_save_dir, filename=new_name)
+        elif dataset == "potato":
+            # Save crop with position
+            count = 0
+            for rgb_crop in rgb_crops:
+                old_name = os.path.basename(rgb_path)
+                new_name = f"{os.path.splitext(old_name)[0]}_A{count + 1}.png"
+                count += 1
+                utils.save_img(rgb_crop, target_dir=rgb_save_dir, filename=new_name)
 
     return rgb_crops
 
