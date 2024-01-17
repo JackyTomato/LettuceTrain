@@ -816,10 +816,12 @@ def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0)
 def main():
     # Set config
     datatype = "potato"
-    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/potato"
+    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/potato/PSI_masks_bg"
     fm_dir = ""
     fvfm_dir = ""
-    rgb_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/potato/rgb_crops"
+    rgb_crop_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/potato/crops_PSI_masks_bg"
+    )
     fm_crop_dir = ""
     fvfm_crop_dir = ""
     rgb_mask_dir = ""
