@@ -597,10 +597,16 @@ def path_crop(
         trayID = int(match_trayID.group(1))
 
         # Determine if image file has 4 or 5 plants
-        if trayID % 2 == 1:
-            num_plants = 4
+        if (trayID < 28) or (trayID > 38):
+            if trayID % 2 == 1:
+                num_plants = 4
+            else:
+                num_plants = 5
         else:
-            num_plants = 5
+            if trayID % 2 == 1:
+                num_plants = 5
+            else:
+                num_plants = 4
 
     # Crop RGB, Fm and FvFm crops in such a way that they overlap
     rgb_crops = indiv_crop(
@@ -810,14 +816,14 @@ def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0)
 def main():
     # Set config
     datatype = "potato"
-    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/RGB_Original_FvFm_timepoints"
-    fm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/Fm_fimg"
-    fvfm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/FvFm_fimg"
-    rgb_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/rgb_crops"
-    fm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/fm_crops"
-    fvfm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/fvfm_crops"
-    rgb_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/rgb_masks"
-    fm_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/fm_masks"
+    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/potato"
+    fm_dir = ""
+    fvfm_dir = ""
+    rgb_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/potato/rgb_crops"
+    fm_crop_dir = ""
+    fvfm_crop_dir = ""
+    rgb_mask_dir = ""
+    fm_mask_dir = ""
     CORES = 12
     CROP = True
     OVERLAY_IMG = False
