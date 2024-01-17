@@ -809,6 +809,7 @@ def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0)
 
 def main():
     # Set config
+    datatype = "potato"
     rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/RGB_Original_FvFm_timepoints"
     fm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/Fm_fimg"
     fvfm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/FvFm_fimg"
@@ -817,12 +818,12 @@ def main():
     fvfm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/fvfm_crops"
     rgb_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/rgb_masks"
     fm_mask_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/fm_masks"
-    CORES = 40
+    CORES = 12
     CROP = True
-    OVERLAY_IMG = True
+    OVERLAY_IMG = False
     RESCALE_RGB = (0.36, 0.36, 1)
-    CROP_DIST = 265  # no overlay: 736
-    CROP_SHAPE = (484, 484)  # no overlay: (1560, 1560)
+    CROP_DIST = 736  # no overlay: 736, overlay: 265
+    CROP_SHAPE = (1560, 1560)  # no overlay: (1560, 1560), overlay: (484, 484)
     MASK = False
     SEEDS = 1500
     H_THRES = 0
@@ -914,6 +915,7 @@ def main():
                     crop_shape=CROP_SHAPE,
                     crop_dist=CROP_DIST,
                     rgb_save_dir=rgb_crop_dir,
+                    dataset=datatype,
                 )
                 process_iter = pool.imap(
                     func=prepped_crop,
