@@ -329,7 +329,7 @@ def main():
                 if cp.DEVICE == "cuda":
                     torch.cuda.empty_cache()
                 print(
-                    f"[INFO] Re-initializing model, optimizer and results logger for fold {fold + 2}!"
+                    f"[INFO] Re-initializing model, optimizer and results logger for fold {fold + 1}!"
                 )
 
             # (Re-)initialize model for next fold with help from model_builder.py and send to device
