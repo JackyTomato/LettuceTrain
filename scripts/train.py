@@ -97,6 +97,9 @@ print("[INFO] Loading config.json was succesful!")
 
 
 def main():
+    # Set cap on thread usage
+    torch.set_num_threads(1)
+
     # Set seeds for reproducibility
     torch.manual_seed(cp.SEED)
     random.seed(cp.SEED)
