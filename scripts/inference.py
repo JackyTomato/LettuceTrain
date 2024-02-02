@@ -11,6 +11,7 @@ import os
 import torch
 import torch.nn as nn
 import torchvision.transforms.functional as F
+import torchmetrics
 import albumentations as A
 import cv2
 import numpy as np
@@ -205,21 +206,23 @@ class LettuceSegNoLabelDataset(Dataset):
 
 def main():
     # Set globals and directories
+    DEVICE = "cuda:0"
     MULTI_GPU = True
-    PERFORM_FN = None
-    RGB_ALPHA = False
+    PERFORM_FN = torchmetrics.classification.BinaryJaccardIndex().to(DEVICE)
+    RGB_ALPHA = True
 
-    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/UnetMit-b3_lr1e-4_Ldice_ep100_bg-rgb_masks"
-    label_dir = None
-    target_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/UnetMit-b3_lr1e-4_Ldice_ep100_tb-bin_masks"
-    savename_appendix = "_UnetMit-b3_lr1e-4_Ldice_ep100_tb_mask.png"
-    perform_save_name = None
+    img_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_crops"
+    label_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_masks"
+    target_dir = (
+        "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/bg_masks_performance"
+    )
+    savename_appendix = "_UnetMit-b3_lr1e-4_b32_Ldice_ep100_bg_mask.png"
+    perform_save_name = "performance_UnetMit-b3_lr1e-4_b32_Ldice_ep100_bg_mask.tsv"
 
     transforms = A.Compose([A.Resize(height=480, width=480), ToTensorV2()])
 
-    DEVICE = "cuda:0"
     model_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/output"
-    model_name = "tb_UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
+    model_name = "UnetMit-b3_lr1e-4_b32_Ldice_ep100.pth.tar"
 
     # From directory inference
     # With performance tracking
