@@ -17,3 +17,4 @@ scripts/run_segmodel.py
 scripts/run_segmodel.spec
 .vscode/settings.json
 scripts/manhattan_plotting.R
+scripts/draw_gt.py
