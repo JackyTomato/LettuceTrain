@@ -3,8 +3,7 @@
 Functionality for training and testing
 
 TODO:
-    - Maybe add training plot
-    - Save some test result images
+    - Add possibility of multiple training performance metrics
 """
 
 # Import statements
