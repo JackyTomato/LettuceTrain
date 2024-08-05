@@ -694,8 +694,12 @@ def path_overlay_crop(
     # Rescale RGB image to allow overlaying with fluorescence images
     re_rgb = rescale(image=rgb, scale=scale_rgb, anti_aliasing=True)
 
+    # Scale Fm to values between 0 and 1
+    fm = fm / np.max(fm)
+
     # Convert RGB back to uint8 after rescaling and convert Fv/Fm to uint8
     re_rgb = util.img_as_ubyte(re_rgb)
+    fm = util.img_as_ubyte(fm)
     fvfm = util.img_as_ubyte(fvfm)
 
     # Extract experiment number and tray ID from RGB image filename
@@ -750,7 +754,7 @@ def path_overlay_crop(
         for fm_crop in fm_crops:
             old_name = os.path.basename(imgtype_paths[0])
             new_name = (
-                f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.tif"
+                f"{os.path.splitext(old_name)[0]}_A{count + 1}_{plantnames[count]}.png"
             )
             count += 1
             fm_crop = Image.fromarray(fm_crop)
@@ -816,22 +820,20 @@ def path_back_mask(rgb_im_path, rm_alpha, n_seeds, h_th=0.0, s_th=0.0, v_th=0.0)
 def main():
     # Set config
     datatype = "potato"
-    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/potato/PSI_masks_bg"
-    fm_dir = ""
-    fvfm_dir = ""
-    rgb_crop_dir = (
-        "/lustre/BIF/nobackup/to001/thesis_MBF/data/potato/crops_PSI_masks_bg"
-    )
-    fm_crop_dir = ""
-    fvfm_crop_dir = ""
+    rgb_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/RGB_Original_FvFm_timepoints"
+    fm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/Fm_fimg"
+    fvfm_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/FvFm_fimg"
+    rgb_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/rgb_crops2"
+    fm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/fm_crops2"
+    fvfm_crop_dir = "/lustre/BIF/nobackup/to001/thesis_MBF/data/complete/fvfm_crops2"
     rgb_mask_dir = ""
     fm_mask_dir = ""
     CORES = 12
     CROP = True
-    OVERLAY_IMG = False
+    OVERLAY_IMG = True
     RESCALE_RGB = (0.36, 0.36, 1)
-    CROP_DIST = 736  # no overlay: 736, overlay: 265
-    CROP_SHAPE = (1560, 1560)  # no overlay: (1560, 1560), overlay: (484, 484)
+    CROP_DIST = 265  # no overlay: 736, overlay: 265
+    CROP_SHAPE = (484, 484)  # no overlay: (1560, 1560), overlay: (484, 484)
     MASK = False
     SEEDS = 1500
     H_THRES = 0

@@ -280,7 +280,7 @@ def main():
                     if RGB_ALPHA:
                         # Apply predicted mask on input image
                         masked_img = draw_segmentation_masks(
-                            input_img, ~output_mask, alpha=0.7
+                            input_img, ~output_mask, alpha=0.8
                         )
                         masked_img = masked_img.detach()
                         masked_img = F.to_pil_image(masked_img)
@@ -346,7 +346,7 @@ def main():
                 if RGB_ALPHA:
                     # Apply predicted mask on input image
                     masked_img = draw_segmentation_masks(
-                        input_img, ~output_mask, alpha=1
+                        input_img, ~output_mask, alpha=0.9
                     )
                     masked_img = masked_img.detach()
                     masked_img = F.to_pil_image(masked_img)
