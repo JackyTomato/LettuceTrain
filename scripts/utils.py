@@ -7,6 +7,7 @@ TODO:
     - Use os.path.splitext to clean up save filenames
     - Add functions for plotting (plot data augs, plot predictions)
     - Convert polygons to pixel masks
+    - Add new performance metrics, e.g. absolute number of misclassified pixels
 """
 # Import functions
 import os

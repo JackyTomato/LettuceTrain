@@ -72,7 +72,7 @@ TODO:
     - Allow user to specify config locations from terminal with arg
     - Make torchvision summary extract input image size from data
     - Make tensorboard script to study different runs
-    - Allow config to specify multi-GPU training
+    - Allow multiple performance metrics to be saved
 """
 
 # Import statements
