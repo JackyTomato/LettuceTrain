@@ -151,31 +151,65 @@ def test_step(model, dataloader, loss_fn, performance_fn, device):
     # Put model in eval mode
     model.eval()
 
-    # Setup test loss and test performance values
-    test_loss, test_perform = 0, 0
+    # When using multiple performance metrics
+    if isinstance(performance_fn, list):
+        # Turn on inference context manager
+        with torch.inference_mode():
+            # Loop through DataLoader batches
+            for batch, (data, labels) in enumerate(dataloader):
+                # Add channel dimension or class dimension to label if not present yet
+                if (len(labels.shape) == 3) or (len(labels.shape) == 1):
+                    labels = labels.unsqueeze(1)
 
-    # Turn on inference context manager
-    with torch.inference_mode():
-        # Loop through DataLoader batches
-        for batch, (data, labels) in enumerate(dataloader):
-            # Add channel dimension or class dimension to label if not present yet
-            if (len(labels.shape) == 3) or (len(labels.shape) == 1):
-                labels = labels.unsqueeze(1)
+                # Send data to target device
+                data, labels = data.float().to(device), labels.float().to(device)
 
-            # Send data to target device
-            data, labels = data.float().to(device), labels.float().to(device)
+                # Setup test loss and test performance values
+                test_loss = 0
+                test_perform = [0] * len(performance_fn)
 
-            # 1. Forward pass
-            test_pred_logits = model(data)
+                # 1. Forward pass
+                test_pred_logits = model(data)
 
-            # 2. Calculate and accumulate loss
-            loss = loss_fn(test_pred_logits, labels)
-            test_loss += loss.item()
+                # 2. Calculate and accumulate loss
+                loss = loss_fn(test_pred_logits, labels)
+                test_loss += loss.item()
 
-            # Calculate and accumulate performance
-            test_perform += performance_fn(test_pred_logits, labels)
+                # Calculate and accumulate performance
+                for ind in len(test_perform):
+                    test_perform[ind] += performance_fn[0](test_pred_logits, labels)
 
-    # Adjust metrics to get average loss and performance per batch
-    test_loss = test_loss / len(dataloader)
-    test_perform = test_perform / len(dataloader)
+        # Adjust metrics to get average loss and performance per batch
+        test_loss = test_loss / len(dataloader)
+        test_perform = [perform / len(dataloader) for perform in test_perform]
+
+    # When using one performance metric
+    else:
+        # Turn on inference context manager
+        with torch.inference_mode():
+            # Loop through DataLoader batches
+            for batch, (data, labels) in enumerate(dataloader):
+                # Add channel dimension or class dimension to label if not present yet
+                if (len(labels.shape) == 3) or (len(labels.shape) == 1):
+                    labels = labels.unsqueeze(1)
+
+                # Send data to target device
+                data, labels = data.float().to(device), labels.float().to(device)
+
+                # Setup test loss and test performance values
+                test_loss, test_perform = 0, 0
+
+                # 1. Forward pass
+                test_pred_logits = model(data)
+
+                # 2. Calculate and accumulate loss
+                loss = loss_fn(test_pred_logits, labels)
+                test_loss += loss.item()
+
+                # Calculate and accumulate performance
+                test_perform += performance_fn(test_pred_logits, labels)
+
+        # Adjust metrics to get average loss and performance per batch
+        test_loss = test_loss / len(dataloader)
+        test_perform = test_perform / len(dataloader)
     return test_loss, test_perform
