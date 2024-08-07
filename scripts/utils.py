@@ -238,6 +238,7 @@ def parse_json(filepath):
     return json_dict
 
 
+# TODO: make a column for each performance metric
 # Save training results, network summaries and config
 def save_train_results(dict_results, target_dir, filename):
     """Writes training loop results to a tab-delimited text file.
