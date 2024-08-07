@@ -30,6 +30,7 @@ def train_step(model, dataloader, loss_fn, performance_fn, optimizer, scaler, de
         dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be trained on.
         loss_fn (nn.Module): A PyTorch loss function to minimize.
         performance_fn (function): A function that calculates a performance metric, e.g. class accuracy in utils.
+            Alternatively a list of functions, to use multiple performance metrics.
         optimizer (torch.optim.Optimizer): A PyTorch optimizer to help minimize the loss function.
         scaler (torch.cuda.amp.GradScaler): A PyTorch gradient scaler to help minimize gradient underflow.
         device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
@@ -43,44 +44,86 @@ def train_step(model, dataloader, loss_fn, performance_fn, optimizer, scaler, de
     # Put model in train mode
     model.train()
 
-    # Setup train loss and train performance values
-    train_loss, train_perform = 0, 0
-
     # Setup tdqm loop for progress bar over batches
     batch_loop = tqdm(dataloader, desc="Batches")
 
-    # Loop through data loader data batches
-    for batch, (data, labels) in enumerate(batch_loop):
-        # Add channel dimension or class dimension to label if not present yet
-        if (len(labels.shape) == 3) or (len(labels.shape) == 1):
-            labels = labels.unsqueeze(1)
+    # When using multiple performance metrics
+    if isinstance(performance_fn, list):
+        # Loop through data loader data batches
+        for batch, (data, labels) in enumerate(batch_loop):
+            # Add channel dimension or class dimension to label if not present yet
+            if (len(labels.shape) == 3) or (len(labels.shape) == 1):
+                labels = labels.unsqueeze(1)
 
-        # Send data to target device
-        data, labels = data.float().to(device), labels.float().to(device)
+            # Send data to target device
+            data, labels = data.float().to(device), labels.float().to(device)
 
-        # 1. Forward pass
-        with torch.cuda.amp.autocast():
-            pred_logits = model(data)
+            # Setup train loss and train performance values
+            train_loss = 0
+            train_perform = [0] * len(performance_fn)
 
-            # 2. Calculate  and accumulate loss
-            loss = loss_fn(pred_logits, labels)
-            train_loss += loss.item()
+            # 1. Forward pass
+            with torch.cuda.amp.autocast():
+                pred_logits = model(data)
 
-        # 3. Backward pass
-        optimizer.zero_grad()  # Sets gradient to zero
-        scaler.scale(loss).backward()  # Calculate gradient
-        scaler.step(optimizer)  # Updates weights using gradient
-        scaler.update()
+                # 2. Calculate  and accumulate loss
+                loss = loss_fn(pred_logits, labels)
+                train_loss += loss.item()
 
-        # Calculate and accumulate performance metric across all batches
-        train_perform += performance_fn(pred_logits, labels)
+            # 3. Backward pass
+            optimizer.zero_grad()  # Sets gradient to zero
+            scaler.scale(loss).backward()  # Calculate gradient
+            scaler.step(optimizer)  # Updates weights using gradient
+            scaler.update()
 
-        # Update tqdm loop
-        batch_loop.set_postfix(train_loss=f"{loss.item():.4f}")
+            # Calculate and accumulate performance metrics across all batches
+            for ind in len(train_perform):
+                train_perform[ind] += performance_fn[0](pred_logits, labels)
 
-    # Adjust metrics to get average loss and performance per batch
-    train_loss = train_loss / len(dataloader)
-    train_perform = train_perform / len(dataloader)
+            # Update tqdm loop
+            batch_loop.set_postfix(train_loss=f"{loss.item():.4f}")
+
+        # Adjust metrics to get average loss and performance per batch
+        train_loss = train_loss / len(dataloader)
+        train_perform = [perform / len(dataloader) for perform in train_perform]
+
+    # When using one performance metric
+    else:
+        # Loop through data loader data batches
+        for batch, (data, labels) in enumerate(batch_loop):
+            # Add channel dimension or class dimension to label if not present yet
+            if (len(labels.shape) == 3) or (len(labels.shape) == 1):
+                labels = labels.unsqueeze(1)
+
+            # Send data to target device
+            data, labels = data.float().to(device), labels.float().to(device)
+
+            # Setup train loss and train performance values
+            train_loss, train_perform = 0, 0
+
+            # 1. Forward pass
+            with torch.cuda.amp.autocast():
+                pred_logits = model(data)
+
+                # 2. Calculate  and accumulate loss
+                loss = loss_fn(pred_logits, labels)
+                train_loss += loss.item()
+
+            # 3. Backward pass
+            optimizer.zero_grad()  # Sets gradient to zero
+            scaler.scale(loss).backward()  # Calculate gradient
+            scaler.step(optimizer)  # Updates weights using gradient
+            scaler.update()
+
+            # Calculate and accumulate performance metrics across all batches
+            train_perform += performance_fn(pred_logits, labels)
+
+            # Update tqdm loop
+            batch_loop.set_postfix(train_loss=f"{loss.item():.4f}")
+
+        # Adjust metrics to get average loss and performance per batch
+        train_loss = train_loss / len(dataloader)
+        train_perform = train_perform / len(dataloader)
     return train_loss, train_perform
 
 
