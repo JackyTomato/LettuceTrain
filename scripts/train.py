@@ -230,9 +230,9 @@ def main():
                 print(
                     f"Epoch: {epoch + 1} | "
                     f"train_loss: {train_loss:.4f} | "
-                    f"train_perform: {train_perform:.4f} | "
+                    f"train_perform: {', '.join(f'{perform:.4f}' for perform in train_perform)} | "
                     f"test_loss: {test_loss:.4f} | "
-                    f"test_perform: {test_perform:.4f}"
+                    f"test_perform: {', '.join(f'{perform:.4f}' for perform in test_perform)}"
                 )
 
                 # Update results dictionary
@@ -413,9 +413,9 @@ def main():
                 print(
                     f"Epoch: {epoch + 1} | "
                     f"train_loss: {train_loss:.4f} | "
-                    f"train_perform: {train_perform:.4f} | "
+                    f"train_perform: {', '.join(f'{perform:.4f}' for perform in train_perform)} | "
                     f"test_loss: {test_loss:.4f} | "
-                    f"test_perform: {test_perform:.4f}"
+                    f"test_perform: {', '.join(f'{perform:.4f}' for perform in test_perform)}"
                 )
 
                 # Update results dictionary
