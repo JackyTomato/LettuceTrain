@@ -7,6 +7,7 @@ TODO:
     - Use os.path.splitext to clean up save filenames
     - Add functions for plotting (plot data augs, plot predictions)
     - Convert polygons to pixel masks
+    - Change save_train_results to accept multiple performance metrics
     - Add new performance metrics, e.g. absolute number of misclassified pixels
 """
 # Import functions
