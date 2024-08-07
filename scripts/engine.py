@@ -123,7 +123,7 @@ def test_step(model, dataloader, loss_fn, performance_fn, device):
     # Put model in eval mode
     model.eval()
 
-    # When using multiple performance metrics
+    # Always treating performance_fn as list to allow for multiple metrics
     if not isinstance(performance_fn, list):
         performance_fn = [performance_fn]
 
