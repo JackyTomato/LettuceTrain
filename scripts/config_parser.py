@@ -13,6 +13,7 @@ are prefixed with "_" so they are not imported to train.py.
 TODO:
     - Instead of .json make more readable .txt file to parse
     - Make model part of config also work for classifier
+    - Allow parsing of multiple performance metrics
 """
 # Import statements
 import os
