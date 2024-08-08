@@ -193,7 +193,7 @@ def binary_jaccard(pred_logits, labels):
         labels (torch.Tensor): Batch of segmentation ground-truths as tensor of floats.
 
     Returns:
-        float: _description_
+        float: Mean Jaccard index over a batch.
     """
     # Convert pred_logits to predictions of 0 or 1
     preds = torch.sigmoid(pred_logits)
@@ -223,6 +223,132 @@ def binary_jaccard(pred_logits, labels):
     # Calculate mean Jaccard over whole batch
     mean_jaccard = sum(jaccards) / len(jaccards)
     return mean_jaccard
+
+
+def binary_tp(pred_logits, labels):
+    """Calculate number of true postives for binary semantic segmentation.
+
+    The number of true positives for a batch of images is calculated as
+    the mean number of true positives over the whole batch.
+
+    Args:
+        pred_logits (torch.Tensor): Batch of segmentation predictions as tensor of floats.
+        labels (torch.Tensor): Batch of segmentation ground-truths as tensor of floats.
+
+    Returns:
+        int: Mean number of true positives over a batch.
+    """
+    # Convert pred_logits to predictions of 0 or 1
+    preds = torch.sigmoid(pred_logits)
+    preds = (preds > 0.5).float()
+
+    # Count number of true positives
+    tps = []
+    for pred, label in zip(preds, labels):
+        tp = (pred * label).sum()
+
+        if type(tp) == "torch.Tensor":
+            tp = tp.item()
+        tps.append(tp)
+
+    # Calculate mean number of true positives over whole batch
+    mean_tp = sum(tps) / len(tps)
+    return mean_tp
+
+
+def binary_fp(pred_logits, labels):
+    """Calculate number of false postives for binary semantic segmentation.
+
+    The number of false positives for a batch of images is calculated as
+    the mean number of false positives over the whole batch.
+
+    Args:
+        pred_logits (torch.Tensor): Batch of segmentation predictions as tensor of floats.
+        labels (torch.Tensor): Batch of segmentation ground-truths as tensor of floats.
+
+    Returns:
+        int: Mean number of false positives over a batch.
+    """
+    # Convert pred_logits to predictions of 0 or 1
+    preds = torch.sigmoid(pred_logits)
+    preds = (preds > 0.5).float()
+
+    # Count number of false positives
+    fps = []
+    for pred, label in zip(preds, labels):
+        tp = (pred * label).sum()
+        fp = pred.sum() - tp
+
+        if type(fp) == "torch.Tensor":
+            fp = fp.item()
+        fps.append(fp)
+
+    # Calculate mean number of false positives over whole batch
+    mean_fp = sum(fps) / len(fps)
+    return mean_fp
+
+
+def binary_tn(pred_logits, labels):
+    """Calculate number of true negatives for binary semantic segmentation.
+
+    The number of true negatives for a batch of images is calculated as
+    the mean number of true negatives over the whole batch.
+
+    Args:
+        pred_logits (torch.Tensor): Batch of segmentation predictions as tensor of floats.
+        labels (torch.Tensor): Batch of segmentation ground-truths as tensor of floats.
+
+    Returns:
+        int: Mean number of true negatives over a batch.
+    """
+    # Convert pred_logits to predictions of 0 or 1
+    preds = torch.sigmoid(pred_logits)
+    preds = (preds > 0.5).float()
+
+    # Count number of true negatives
+    tns = []
+    for pred, label in zip(preds, labels):
+        tn = (~pred * ~label).sum()
+
+        if type(tn) == "torch.Tensor":
+            tn = tn.item()
+        tns.append(tn)
+
+    # Calculate mean number of true negatives over whole batch
+    mean_tn = sum(tns) / len(tns)
+    return mean_tn
+
+
+def binary_fn(pred_logits, labels):
+    """Calculate number of false negatives for binary semantic segmentation.
+
+    The number of false negatives for a batch of images is calculated as
+    the mean number of false negatives over the whole batch.
+
+    Args:
+        pred_logits (torch.Tensor): Batch of segmentation predictions as tensor of floats.
+        labels (torch.Tensor): Batch of segmentation ground-truths as tensor of floats.
+
+    Returns:
+        int: Mean number of false negatives over a batch.
+    """
+    # Convert pred_logits to predictions of 0 or 1
+    preds = torch.sigmoid(pred_logits)
+    preds = (preds > 0.5).float()
+
+    # Count number of false negatives
+    fns = []
+    for pred, label in zip(preds, labels):
+        tn = (~pred * ~label).sum()
+        fn = ~pred.sum() - tn
+
+        if type(fn) == "torch.Tensor":
+            fn = fn.item()
+        fns.append(fn)
+
+    # Calculate mean number of false negatives over whole batch
+    mean_fn = sum(fns) / len(fns)
+    return mean_fn
 
 
 # .json parser for config.json files
