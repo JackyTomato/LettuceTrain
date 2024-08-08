@@ -84,6 +84,8 @@ import random
 import gc
 from tqdm import tqdm
 
+print("[INFO] Libraries loaded!")
+
 # Import supporting modules
 if "scripts" not in os.getcwd():
     # Change wd to scripts if cwd is not scripts
