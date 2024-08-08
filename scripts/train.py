@@ -280,14 +280,14 @@ def main():
                 utils.save_network_summary(
                     model=model,
                     target_dir=cp.SAVE_MODEL_DIR,
-                    filename=f"summary_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}_fold{fold + 1}.txt",
+                    filename=f"summary_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.txt",
                     n_channels=cp.N_CHANNELS,
                 )
             else:
                 utils.save_network_summary(
                     model=model,
                     target_dir=cp.SAVE_MODEL_DIR,
-                    filename=f"summary_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}_fold{fold + 1}.txt",
+                    filename=f"summary_{cp.SAVE_MODEL_NAME.split(os.extsep)[0]}.txt",
                     n_channels=cp.N_CHANNELS_MED1 + cp.N_CHANNELS_MED2,
                 )
 

@@ -283,14 +283,16 @@ def save_train_results(dict_results, target_dir, filename):
             for key in headers:
                 # Writing each performance metric value
                 if key in ["train_perform", "test_perform"]:
-                    target_column = dict_results[key][perform_ind]
-                    line_values.append(str(target_column[row]))
+                    target_column = dict_results[key]
+                    line_values.append(str(target_column[row][perform_ind]))
                     perform_ind += 1
                     if perform_ind == num_metrics:
                         perform_ind = 0
+
                 # Writing the non-performance metric values
-                target_column = dict_results[key]
-                line_values.append(str(target_column[row]))
+                else:
+                    target_column = dict_results[key]
+                    line_values.append(str(target_column[row]))
             line = "\t".join(line_values)
             f.write(line)
             f.write("\n")
