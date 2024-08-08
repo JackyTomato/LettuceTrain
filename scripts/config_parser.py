@@ -48,7 +48,7 @@ NUM_EPOCHS = _config_dict["NUM_EPOCHS"]
 OPTIMIZER = eval(_config_dict["OPTIMIZER"])
 SCALER = eval(_config_dict["SCALER"])
 LOSS_FN = eval(_config_dict["LOSS_FN"])
-PERFORMANCE_FN = eval(_config_dict["PERFORMANCE_FN"])
+PERFORMANCE_FN = [eval(_fn) for _fn in _config_dict["PERFORMANCE_FN"]]
 
 # Setup data loading settings
 DATASET = eval(_config_dict["DATA_CLASS"])
