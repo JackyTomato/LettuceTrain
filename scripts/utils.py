@@ -256,30 +256,40 @@ def save_train_results(dict_results, target_dir, filename):
     target_dir_path = Path(target_dir)
     target_dir_path.mkdir(parents=True, exist_ok=True)
 
-    # Sort keys to get sorted columns
-    sorted_keys = [
-        "epoch",
-        "train_loss",
-        "train_perform",
-        "test_loss",
-        "test_perform",
-    ]
-
     # Get number of items to write rows
     num_items = len(dict_results["epoch"])
 
     # Write dictonary to file
     filepath = os.path.join(target_dir, filename)
     with open(filepath, "w") as f:
+        # Check if multiple performance metrics were used
+        if len(dict_results["train_perform"][0]) > 1:
+            num_metrics = len(dict_results["train_perform"][0])
+
         # Write header
-        header = "\t".join(sorted_keys)
-        f.write(header)
+        headers = (
+            ["epoch", "train_loss"]
+            + ["train_perform"] * num_metrics
+            + ["test_loss"]
+            + ["test_perform"] * num_metrics
+        )
+        header_line = "\t".join(headers)
+        f.write(header_line)
         f.write("\n")
 
         # Write rows
         for row in range(num_items):
             line_values = []
-            for key in sorted_keys:
+            perform_ind = 0
+            for key in headers:
+                # Writing each performance metric value
+                if key in ["train_perform", "test_perform"]:
+                    target_column = dict_results[key][perform_ind]
+                    line_values.append(str(target_column[row]))
+                    perform_ind += 1
+                    if perform_ind == num_metrics:
+                        perform_ind = 0
+                # Writing the non-performance metric values
                 target_column = dict_results[key]
                 line_values.append(str(target_column[row]))
             line = "\t".join(line_values)
