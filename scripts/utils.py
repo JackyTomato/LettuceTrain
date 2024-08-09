@@ -236,20 +236,17 @@ def binary_tp(pred_logits, labels):
         labels (torch.Tensor): Batch of segmentation ground-truths as tensor of floats.
 
     Returns:
-        int: Mean number of true positives over a batch.
+        float: Mean number of true positives over a batch.
     """
-    # Convert pred_logits to predictions of 0 or 1
+    # Convert pixels in pred_logits and labels to either 0 or 1
     preds = torch.sigmoid(pred_logits)
     preds = (preds > 0.5).bool()
-
-    # Also make labels boolean to facilitate calculations
     labels = labels.bool()
 
     # Count number of true positives
     tps = []
     for pred, label in zip(preds, labels):
-        tp = (pred * label).sum()
-
+        tp = ((pred == True) & (label == True)).sum()
         if type(tp) == "torch.Tensor":
             tp = tp.item()
         tps.append(tp)
@@ -270,21 +267,17 @@ def binary_fp(pred_logits, labels):
         labels (torch.Tensor): Batch of segmentation ground-truths as tensor of floats.
 
     Returns:
-        int: Mean number of false positives over a batch.
+        float: Mean number of false positives over a batch.
     """
-    # Convert pred_logits to predictions of 0 or 1
+    # Convert pixels in pred_logits and labels to either 0 or 1
     preds = torch.sigmoid(pred_logits)
     preds = (preds > 0.5).bool()
-
-    # Also make labels boolean to facilitate calculations
     labels = labels.bool()
 
-    # Count number of false positives
+    # Count number of true positives
     fps = []
     for pred, label in zip(preds, labels):
-        tp = (pred * label).sum()
-        fp = pred.sum() - tp
-
+        fp = ((pred == True) & (label == False)).sum()
         if type(fp) == "torch.Tensor":
             fp = fp.item()
         fps.append(fp)
@@ -305,20 +298,17 @@ def binary_tn(pred_logits, labels):
         labels (torch.Tensor): Batch of segmentation ground-truths as tensor of floats.
 
     Returns:
-        int: Mean number of true negatives over a batch.
+        float: Mean number of true negatives over a batch.
     """
-    # Convert pred_logits to predictions of 0 or 1
+    # Convert pixels in pred_logits and labels to either 0 or 1
     preds = torch.sigmoid(pred_logits)
     preds = (preds > 0.5).bool()
-
-    # Also make labels boolean to facilitate calculations
     labels = labels.bool()
 
-    # Count number of true negatives
+    # Count number of true positives
     tns = []
     for pred, label in zip(preds, labels):
-        tn = (~pred * ~label).sum()
-
+        tn = ((pred == False) & (label == False)).sum()
         if type(tn) == "torch.Tensor":
             tn = tn.item()
         tns.append(tn)
@@ -339,21 +329,17 @@ def binary_fn(pred_logits, labels):
         labels (torch.Tensor): Batch of segmentation ground-truths as tensor of floats.
 
     Returns:
-        int: Mean number of false negatives over a batch.
+        float: Mean number of false negatives over a batch.
     """
-    # Convert pred_logits to predictions of 0 or 1
+    # Convert pixels in pred_logits and labels to either 0 or 1
     preds = torch.sigmoid(pred_logits)
     preds = (preds > 0.5).bool()
-
-    # Also make labels boolean to facilitate calculations
     labels = labels.bool()
 
-    # Count number of false negatives
+    # Count number of true positives
     fns = []
     for pred, label in zip(preds, labels):
-        tn = (~pred * ~label).sum()
-        fn = ~pred.sum() - tn
-
+        fn = ((pred == False) & (label == True)).sum()
         if type(fn) == "torch.Tensor":
             fn = fn.item()
         fns.append(fn)
