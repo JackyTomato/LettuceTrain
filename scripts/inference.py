@@ -308,7 +308,7 @@ def main():
                     utils.save_img(masked_img, target_dir=target_dir, filename=new_name)
 
                     # Write performance to tsv file
-                    new_line = f"{new_name}\t{perform}\n"
+                    new_line = f"{new_name}\t{'\t'.join(str(single_perform) for single_perform in perform)}\n"
                     perform_tsv.write(new_line)
         print(f"Performance has been saved to {perform_path}!")
 
