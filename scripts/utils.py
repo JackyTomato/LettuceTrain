@@ -240,7 +240,10 @@ def binary_tp(pred_logits, labels):
     """
     # Convert pred_logits to predictions of 0 or 1
     preds = torch.sigmoid(pred_logits)
-    preds = (preds > 0.5).float()
+    preds = (preds > 0.5).bool()
+
+    # Also make labels boolean to facilitate calculations
+    labels = labels.bool()
 
     # Count number of true positives
     tps = []
@@ -271,7 +274,10 @@ def binary_fp(pred_logits, labels):
     """
     # Convert pred_logits to predictions of 0 or 1
     preds = torch.sigmoid(pred_logits)
-    preds = (preds > 0.5).float()
+    preds = (preds > 0.5).bool()
+
+    # Also make labels boolean to facilitate calculations
+    labels = labels.bool()
 
     # Count number of false positives
     fps = []
@@ -303,7 +309,10 @@ def binary_tn(pred_logits, labels):
     """
     # Convert pred_logits to predictions of 0 or 1
     preds = torch.sigmoid(pred_logits)
-    preds = (preds > 0.5).float()
+    preds = (preds > 0.5).bool()
+
+    # Also make labels boolean to facilitate calculations
+    labels = labels.bool()
 
     # Count number of true negatives
     tns = []
@@ -334,7 +343,10 @@ def binary_fn(pred_logits, labels):
     """
     # Convert pred_logits to predictions of 0 or 1
     preds = torch.sigmoid(pred_logits)
-    preds = (preds > 0.5).float()
+    preds = (preds > 0.5).bool()
+
+    # Also make labels boolean to facilitate calculations
+    labels = labels.bool()
 
     # Count number of false negatives
     fns = []
