@@ -3,7 +3,7 @@
 Runs inference of models. Script can save results and corresponding performance.
 
 TODO:
-    - Remove convoluted method of sending model & data to device as normal method works now
+    - Allow multiple performance metrics to be tracked when doing inference
 """
 
 # Import statements
