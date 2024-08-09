@@ -104,11 +104,13 @@ def inference(
         data (torch.tensor): PyTorch tensor of data with structure: [batch, channel, height, width].
         labels (torch.tensor, optional): PyTorch tensor of labels. Defaults to None.
         perform_fn (function, optional): Function that calculates performance. Defaults to None.
+            Alternatively, a list of multiple performance metric functions.
         move_channel (bool, optional): If True, moves channel from 2nd to 4th dimension. Defaults to True.
         output_np (bool, optional): If True, converts output tensor to np.ndarray. Defaults to True.
 
     Returns:
         tensor/tuple(tensor, list): Tensor of predictions and optionally performance as list of floats.
+            Alternatively performance is a list of list of floats when using multiple performance metrics.
     """
     # Make predictions
     model = model.eval()
@@ -126,12 +128,22 @@ def inference(
 
     # Calculate performance if desired
     if (labels is not None) and (perform_fn is not None):
+        # To allow multiple performance metrics
+        if not isinstance(perform_fn, list):
+            perform_fn = [perform_fn]
+
         performs = []
         for logit_pred, label in zip(logit_preds, labels):
             batch_pred = logit_pred.unsqueeze(0)
             batch_label = label.reshape(batch_pred.shape)
-            perform = perform_fn(batch_pred, batch_label)
-            performs.append(perform)
+
+            # Go through each performance metric
+            batch_perform = []
+            for fn in perform_fn:
+                perform = fn(batch_pred, batch_label)
+                batch_perform.append(perform)
+
+            performs.append(batch_perform)
         return preds, performs
 
     else:
