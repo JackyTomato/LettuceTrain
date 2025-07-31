@@ -1,0 +1,59 @@
+{
+    "SEED": 21,
+    "DEVICE": "cuda",
+    "MULTI_GPU": "True",
+    "NUM_WORKERS": 8,
+    "PIN_MEMORY": "True",
+    "LEARNING_RATE": 1e-4,
+    "NUM_EPOCHS": 100,
+    "OPTIMIZER": "torch.optim.AdamW",
+    "SCALER": "torch.cuda.amp.GradScaler()",
+    "LOSS_FN": "smp.losses.DiceLoss(mode='binary', smooth=1)",
+    "PERFORMANCE_FN": [
+        "utils.binary_jaccard",
+        "utils.binary_tp",
+        "utils.binary_fp",
+        "utils.binary_tn",
+        "utils.binary_fn",
+        "utils.num_gt_pos"
+    ],
+    "DATA_CLASS": "data_setup.LettuceSegDataset",
+    "IMG_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_crops",
+    "LABEL_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/data/TrainTest/rgb_masks",
+    "FM_DIR": "None",
+    "FVFM_DIR": "None",
+    "FUSION": "None",
+    "TRAIN_FRAC": [
+        0.75
+    ],
+    "KFOLD": 4,
+    "TRAIN_TRANSFORMS": [
+        "A.Resize(height=480, width=480)",
+        "A.Rotate(limit=1100, border_mode=cv2.BORDER_CONSTANT, p=0.5)",
+        "A.HorizontalFlip(p=0.5)",
+        "A.VerticalFlip(p=0.5)",
+        "A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.5)",
+        "A.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05, p=0.5)",
+        "ToTensorV2()"
+    ],
+    "TEST_TRANSFORMS": [
+        "A.Resize(height=480, width=480)",
+        "ToTensorV2()"
+    ],
+    "BATCH_SIZE": 32,
+    "MODEL_TYPE": "model_builder.Segmenter",
+    "MODEL_NAME": "UnetPlusPlus",
+    "ENCODER_NAME": "timm-res2net50_14w_8s",
+    "ENCODER_WEIGHTS": "imagenet",
+    "N_CHANNELS": 3,
+    "N_CHANNELS_MED1": 3,
+    "N_CHANNELS_MED2": 1,
+    "N_CLASSES": 1,
+    "DECODER_ATTENTION": "None",
+    "ENCODER_FREEZE": "False",
+    "CHECKPOINT_FREQ": 5,
+    "SAVE_MODEL_DIR": "/lustre/BIF/nobackup/to001/thesis_MBF/output/UnetPlusPlusRes2Net50-14_lr1e-4_b32_Ldice_mult_perform2_ep100_4fold_CV",
+    "SAVE_MODEL_NAME": "UnetPlusPlusRes2Net50-14_lr1e-4_b32_Ldice_mult_perform2_ep100_4fold_CV.pth.tar",
+    "LOAD_MODEL": "False",
+    "LOAD_MODEL_PATH": "/lustre/BIF/nobackup/to001/thesis_MBF/output/UnetPlusPlusRes2Net50-14_lr1e-4_b32_Ldice_mult_perform2_ep100_4fold_CV/UnetPlusPlusRes2Net50-14_lr1e-4_b32_Ldice_mult_perform2_ep100_4fold_CV.pth.tar"
+}
